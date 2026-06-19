@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .bot_service import BotService
 from .config import Settings, load_settings
+from .hh_apply_runner import HhApplyRunner
 from .hh_resume_runner import HhResumeRunner
 from .models import UserSettings
 from .hh_search_runner import HhSearchRunner
@@ -65,6 +66,15 @@ def build_resume_runner(settings: Settings, store: SQLiteStore) -> HhResumeRunne
     )
 
 
+def build_apply_runner(settings: Settings, store: SQLiteStore) -> HhApplyRunner:
+    return HhApplyRunner(
+        store=store,
+        oauth_state=settings.oauth_state,
+        user_agent=settings.hh_user_agent,
+        real_apply_enabled=settings.enable_real_apply,
+    )
+
+
 def main() -> None:
     settings = load_settings()
     if settings.run_oauth_server:
@@ -77,11 +87,13 @@ def main() -> None:
     if settings.run_telegram_polling:
         search_runner = build_search_runner(settings, service.store)
         resume_runner = build_resume_runner(settings, service.store)
+        apply_runner = build_apply_runner(settings, service.store)
         run_polling_sync(
             service,
             settings.telegram_bot_token,
             search_runner=search_runner,
             resume_runner=resume_runner,
+            apply_runner=apply_runner,
         )
         return
 

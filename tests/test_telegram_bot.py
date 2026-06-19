@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from hh_bot.bot_service import BotService
+from hh_bot.hh_apply import ApplyResult
 from hh_bot.models import Resume, UserSettings, Vacancy
 from hh_bot.storage import SQLiteStore
 from hh_bot.telegram_bot import TelegramCommandAdapter, ensure_bot_token
@@ -99,6 +100,36 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Python Developer", message.answers[0])
             self.assertIn("/use_resume resume-1", message.answers[0])
 
+    async def test_adapter_uses_apply_runner_for_approve(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("python",),
+                ),
+                vacancies=[
+                    Vacancy(
+                        id="vacancy-1",
+                        name="Python Developer",
+                        employer_name="Acme",
+                        url="https://hh.ru/vacancy/1",
+                        description="Python backend",
+                    )
+                ],
+            )
+            apply_runner = FakeApplyRunner()
+            adapter = TelegramCommandAdapter(service, apply_runner=apply_runner)
+            message = FakeMessage("/approve vacancy-1")
+
+            await adapter.handle_message(message)
+
+            self.assertTrue(apply_runner.was_called)
+            self.assertIn("Dry-run recorded", message.answers[0])
+
 
 class TelegramConfigTests(unittest.TestCase):
     def test_ensure_bot_token_rejects_missing_token(self):
@@ -148,3 +179,16 @@ class FakeResumeRunner:
                 url="https://api.hh.ru/resumes/resume-1",
             )
         ]
+
+
+class FakeApplyRunner:
+    def __init__(self) -> None:
+        self.was_called = False
+
+    async def approve(self, *, vacancy, settings, score):
+        self.was_called = True
+        return ApplyResult(
+            ok=True,
+            status="dry_run",
+            user_message=f"Dry-run recorded for vacancy {vacancy.id}. No real hh.ru response was sent.",
+        )

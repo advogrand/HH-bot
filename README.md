@@ -115,6 +115,22 @@ HH_SEARCH_PER_PAGE=20
 
 `HH_SEARCH_AREA=1` is Moscow in hh.ru dictionaries. Leave it empty to search across all areas available to the account. Search results are only used for local scoring and Telegram review; `/approve` still creates a dry-run audit entry and does not send a real hh.ru response.
 
+## Apply Safety
+
+By default approvals are dry-run only:
+
+```powershell
+ENABLE_REAL_APPLY=0
+```
+
+With this default, `/approve <vacancy_id>` writes an audit entry and does not call hh.ru apply endpoint. The code path for real apply is present and posts to official `POST https://api.hh.ru/negotiations` with `resume_id`, `vacancy_id`, and `message`, but it is armed only when this explicit flag is set:
+
+```powershell
+ENABLE_REAL_APPLY=1
+```
+
+Keep it off until OAuth, resume selection, search quality, and cover letter text are manually verified.
+
 ## Select Resume
 
 After connecting hh.ru, run:

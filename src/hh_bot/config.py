@@ -26,6 +26,7 @@ class Settings:
     hh_search_text: str
     hh_search_area: str | None
     hh_search_per_page: int
+    enable_real_apply: bool
 
 
 def load_settings() -> Settings:
@@ -52,6 +53,7 @@ def load_settings() -> Settings:
         hh_search_text=env.get("HH_SEARCH_TEXT", "python"),
         hh_search_area=env.get("HH_SEARCH_AREA") or None,
         hh_search_per_page=int(env.get("HH_SEARCH_PER_PAGE", "20")),
+        enable_real_apply=_bool_env(env, "ENABLE_REAL_APPLY"),
     )
 
 

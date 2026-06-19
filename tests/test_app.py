@@ -29,6 +29,7 @@ class AppTests(unittest.TestCase):
                 hh_search_text="python",
                 hh_search_area="1",
                 hh_search_per_page=10,
+                enable_real_apply=False,
             )
             SQLiteStore(settings.database_path).initialize()
             SQLiteStore(settings.database_path).save_selected_resume_id("persisted-resume")

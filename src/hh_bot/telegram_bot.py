@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 from .bot_service import BotService
+from .scoring import evaluate_vacancy
 
 
 class TelegramCommandAdapter:
@@ -12,14 +13,16 @@ class TelegramCommandAdapter:
         service: BotService,
         search_runner: Any | None = None,
         resume_runner: Any | None = None,
+        apply_runner: Any | None = None,
     ) -> None:
         self.service = service
         self.search_runner = search_runner
         self.resume_runner = resume_runner
+        self.apply_runner = apply_runner
 
     async def handle_message(self, message: Any) -> None:
         text = getattr(message, "text", None) or ""
-        command = text.strip().partition(" ")[0]
+        command, _, arg = text.strip().partition(" ")
         if command == "/search" and self.search_runner is not None:
             vacancies = await self.search_runner.fetch_vacancies()
             if not vacancies:
@@ -32,6 +35,30 @@ class TelegramCommandAdapter:
                 await message.answer("Connect hh.ru first with /connect, then run /resumes again.")
                 return
             self.service.resumes = resumes
+        if command == "/approve" and self.apply_runner is not None:
+            vacancy = self.service._find_vacancy(arg.strip())
+            if vacancy is None:
+                await message.answer(f"Vacancy {arg.strip() or '<empty>'} not found in current queue.")
+                return
+            already_applied = self.service.store.has_response(
+                self.service.settings.resume_id,
+                vacancy.id,
+            )
+            score = evaluate_vacancy(
+                vacancy,
+                self.service.settings,
+                already_applied=already_applied,
+            )
+            if already_applied:
+                await message.answer(f"Vacancy {vacancy.id} already has a recorded response.")
+                return
+            result = await self.apply_runner.approve(
+                vacancy=vacancy,
+                settings=self.service.settings,
+                score=score,
+            )
+            await message.answer(result.user_message)
+            return
         response = self.service.handle_command(text)
         await message.answer(response)
 
@@ -47,6 +74,7 @@ def create_dispatcher(
     service: BotService,
     search_runner: Any | None = None,
     resume_runner: Any | None = None,
+    apply_runner: Any | None = None,
 ) -> Any:
     try:
         from aiogram import Dispatcher
@@ -60,6 +88,7 @@ def create_dispatcher(
         service,
         search_runner=search_runner,
         resume_runner=resume_runner,
+        apply_runner=apply_runner,
     )
     dispatcher = Dispatcher()
 
@@ -91,6 +120,7 @@ async def run_polling(
     token: str,
     search_runner: Any | None = None,
     resume_runner: Any | None = None,
+    apply_runner: Any | None = None,
 ) -> None:
     try:
         from aiogram import Bot
@@ -104,6 +134,7 @@ async def run_polling(
         service,
         search_runner=search_runner,
         resume_runner=resume_runner,
+        apply_runner=apply_runner,
     )
     await dispatcher.start_polling(bot)
 
@@ -113,6 +144,7 @@ def run_polling_sync(
     token: str,
     search_runner: Any | None = None,
     resume_runner: Any | None = None,
+    apply_runner: Any | None = None,
 ) -> None:
     asyncio.run(
         run_polling(
@@ -120,6 +152,7 @@ def run_polling_sync(
             token,
             search_runner=search_runner,
             resume_runner=resume_runner,
+            apply_runner=apply_runner,
         )
     )
 
