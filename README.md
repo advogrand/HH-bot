@@ -2,7 +2,7 @@
 
 Semi-automatic Telegram bot for finding relevant hh.ru vacancies, preparing safe cover letters, and collecting explicit user approval before any response is sent.
 
-Current state: v1 dry-run foundation with real Telegram polling support. It includes scoring, audit storage, Telegram command handling, Telegram message rendering, and hh.ru API error mapping. It does not send real hh.ru responses yet.
+Current state: v1 dry-run foundation with real Telegram polling support. It includes scoring, audit storage, Telegram command handling, Telegram message rendering, hh.ru OAuth/search/resume loading, guarded apply flow, and user-editable Telegram settings. Real hh.ru responses stay disabled by default.
 
 ## Safety Defaults
 
@@ -66,6 +66,10 @@ Supported commands:
 - `/use_resume <resume_id>`
 - `/status`
 - `/settings`
+- `/set_search <search phrase>`
+- `/set_score <0-100>`
+- `/set_resume <resume_id>`
+- `/set_letter <cover letter text>`
 - `/search`
 - `/approve <vacancy_id>`
 - `/reject <vacancy_id>`
@@ -146,3 +150,16 @@ The bot calls official `GET https://api.hh.ru/resumes/mine`, lists available res
 ```
 
 Selected resume id is saved in local SQLite and reused on next start. `/settings` shows hh connection state, selected resume id, search text, area, threshold, include keywords, and exclude keywords.
+
+## Edit Settings from Telegram
+
+Runtime settings are saved in local SQLite and reused on next start:
+
+```text
+/set_search python backend
+/set_score 72
+/set_resume resume-id
+/set_letter Hello! I am interested in this vacancy and would be glad to discuss my experience.
+```
+
+`/set_letter` stores exactly the text you provide. The bot must not invent facts for the cover letter.

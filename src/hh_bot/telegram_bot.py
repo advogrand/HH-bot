@@ -24,6 +24,8 @@ class TelegramCommandAdapter:
         text = getattr(message, "text", None) or ""
         command, _, arg = text.strip().partition(" ")
         if command == "/search" and self.search_runner is not None:
+            if hasattr(self.search_runner, "search_text"):
+                self.search_runner.search_text = self.service.search_text
             vacancies = await self.search_runner.fetch_vacancies()
             if not vacancies:
                 await message.answer("Connect hh.ru first with /connect, then run /search again.")
@@ -103,6 +105,10 @@ def create_dispatcher(
             "use_resume",
             "status",
             "settings",
+            "set_search",
+            "set_score",
+            "set_resume",
+            "set_letter",
             "search",
             "approve",
             "reject",

@@ -16,19 +16,23 @@ def build_service(settings: Settings) -> BotService:
     store = SQLiteStore(settings.database_path)
     store.initialize()
     resume_id = store.get_selected_resume_id() or settings.default_resume_id
+    stored_min_score = store.get_min_score()
+    min_score = stored_min_score if stored_min_score is not None else settings.default_min_score
+    cover_letter = store.get_cover_letter() or settings.default_cover_letter
+    search_text = store.get_search_text() or settings.hh_search_text
     user_settings = UserSettings(
         resume_id=resume_id,
-        cover_letter=settings.default_cover_letter,
+        cover_letter=cover_letter,
         include_keywords=settings.include_keywords,
         exclude_keywords=settings.exclude_keywords,
-        min_score=settings.default_min_score,
+        min_score=min_score,
     )
     return BotService(
         store=store,
         settings=user_settings,
         oauth_start_url=settings.oauth_start_url,
         oauth_state=settings.oauth_state,
-        search_text=settings.hh_search_text,
+        search_text=search_text,
         search_area=settings.hh_search_area,
     )
 

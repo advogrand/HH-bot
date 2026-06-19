@@ -32,12 +32,18 @@ class AppTests(unittest.TestCase):
                 enable_real_apply=False,
             )
             SQLiteStore(settings.database_path).initialize()
-            SQLiteStore(settings.database_path).save_selected_resume_id("persisted-resume")
+            store = SQLiteStore(settings.database_path)
+            store.save_selected_resume_id("persisted-resume")
+            store.save_search_text("python backend")
+            store.save_min_score(0)
+            store.save_cover_letter("Persisted letter")
 
             service = build_service(settings)
 
             self.assertEqual(service.settings.resume_id, "persisted-resume")
-            self.assertEqual(service.settings.min_score, 77)
+            self.assertEqual(service.settings.min_score, 0)
+            self.assertEqual(service.settings.cover_letter, "Persisted letter")
+            self.assertEqual(service.search_text, "python backend")
             self.assertEqual(service.settings.include_keywords, ("python", "fastapi"))
             self.assertIn("http://localhost:8000/oauth/hh/start", service.handle_command("/connect"))
             self.assertEqual(service.store.list_audit_entries(), [])

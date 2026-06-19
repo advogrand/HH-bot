@@ -53,9 +53,18 @@ class BotService:
             return self._resumes()
         if name == "/use_resume":
             return self._use_resume(arg.strip())
+        if name == "/set_search":
+            return self._set_search(arg.strip())
+        if name == "/set_score":
+            return self._set_score(arg.strip())
+        if name == "/set_resume":
+            return self._set_resume(arg.strip())
+        if name == "/set_letter":
+            return self._set_letter(arg.strip())
         return (
             "Unknown command. Use /start, /connect, /resumes, /use_resume, /status, "
-            "/settings, /search, /approve, /reject, or /stop."
+            "/settings, /set_search, /set_score, /set_resume, /set_letter, /search, "
+            "/approve, /reject, or /stop."
         )
 
     def _start(self) -> str:
@@ -73,6 +82,7 @@ class BotService:
             f"Minimum score: {self.settings.min_score}\n"
             f"Search text: {self.search_text or 'not set'}\n"
             f"Search area: {area}\n"
+            f"Cover letter: {self.settings.cover_letter or 'not set'}\n"
             f"Include keywords: {', '.join(self.settings.include_keywords) or 'none'}\n"
             f"Exclude keywords: {', '.join(self.settings.exclude_keywords) or 'none'}"
         )
@@ -99,6 +109,38 @@ class BotService:
                 self.store.save_selected_resume_id(resume.id)
                 return f"Selected resume: {resume.title} ({resume.id})"
         return f"Resume {resume_id or '<empty>'} not found. Run /resumes first."
+
+    def _set_search(self, search_text: str) -> str:
+        if not search_text:
+            return "Use /set_search followed by a vacancy search phrase."
+        self.search_text = search_text
+        self.store.save_search_text(search_text)
+        return f"Search text updated: {search_text}"
+
+    def _set_score(self, raw_score: str) -> str:
+        try:
+            min_score = int(raw_score)
+        except ValueError:
+            return "Use /set_score with a number from 0 to 100."
+        if min_score < 0 or min_score > 100:
+            return "Use /set_score with a number from 0 to 100."
+        self.settings = replace(self.settings, min_score=min_score)
+        self.store.save_min_score(min_score)
+        return f"Minimum score updated: {min_score}"
+
+    def _set_resume(self, resume_id: str) -> str:
+        if not resume_id:
+            return "Use /set_resume followed by a hh.ru resume id."
+        self.settings = replace(self.settings, resume_id=resume_id)
+        self.store.save_selected_resume_id(resume_id)
+        return f"Resume updated: {resume_id}"
+
+    def _set_letter(self, cover_letter: str) -> str:
+        if not cover_letter:
+            return "Use /set_letter followed by your exact cover letter text."
+        self.settings = replace(self.settings, cover_letter=cover_letter)
+        self.store.save_cover_letter(cover_letter)
+        return "Cover letter updated."
 
     def _status(self) -> str:
         audit_count = len(self.store.list_audit_entries())

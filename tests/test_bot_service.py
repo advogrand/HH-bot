@@ -163,6 +163,63 @@ class BotServiceTests(unittest.TestCase):
             self.assertIn("Search area: 1", message)
             self.assertIn("Minimum score: 75", message)
 
+    def test_set_search_updates_runtime_and_persists_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings("resume-1", "Hello"),
+                search_text="python",
+            )
+
+            message = service.handle_command("/set_search python backend")
+
+            self.assertIn("Search text updated: python backend", message)
+            self.assertEqual(service.search_text, "python backend")
+            self.assertEqual(store.get_search_text(), "python backend")
+
+    def test_set_score_validates_range_and_persists_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings("resume-1", "Hello", min_score=60),
+            )
+
+            invalid = service.handle_command("/set_score 101")
+            valid = service.handle_command("/set_score 72")
+
+            self.assertIn("Use /set_score with a number from 0 to 100.", invalid)
+            self.assertIn("Minimum score updated: 72", valid)
+            self.assertEqual(service.settings.min_score, 72)
+            self.assertEqual(store.get_min_score(), 72)
+
+    def test_set_resume_updates_runtime_and_persists_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(store=store, settings=UserSettings("resume-1", "Hello"))
+
+            message = service.handle_command("/set_resume resume-2")
+
+            self.assertIn("Resume updated: resume-2", message)
+            self.assertEqual(service.settings.resume_id, "resume-2")
+            self.assertEqual(store.get_selected_resume_id(), "resume-2")
+
+    def test_set_letter_updates_runtime_and_persists_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(store=store, settings=UserSettings("resume-1", "Hello"))
+
+            message = service.handle_command("/set_letter Здравствуйте, готов обсудить.")
+
+            self.assertIn("Cover letter updated.", message)
+            self.assertEqual(service.settings.cover_letter, "Здравствуйте, готов обсудить.")
+            self.assertEqual(store.get_cover_letter(), "Здравствуйте, готов обсудить.")
+
 
 if __name__ == "__main__":
     unittest.main()

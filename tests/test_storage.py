@@ -48,6 +48,27 @@ class StorageTests(unittest.TestCase):
 
             self.assertEqual(store.get_selected_resume_id(), "resume-1")
 
+    def test_saves_and_loads_user_tunable_settings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "bot.sqlite3"
+            store = SQLiteStore(db_path)
+            store.initialize()
+
+            self.assertIsNone(store.get_search_text())
+            self.assertIsNone(store.get_min_score())
+            self.assertIsNone(store.get_cover_letter())
+
+            store.save_search_text("python backend")
+            store.save_min_score(72)
+            store.save_cover_letter("Здравствуйте, готов обсудить вакансию.")
+
+            self.assertEqual(store.get_search_text(), "python backend")
+            self.assertEqual(store.get_min_score(), 72)
+            self.assertEqual(
+                store.get_cover_letter(),
+                "Здравствуйте, готов обсудить вакансию.",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

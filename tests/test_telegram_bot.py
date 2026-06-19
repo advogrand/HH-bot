@@ -66,6 +66,27 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(search_runner.was_called)
             self.assertIn("Python Developer", message.answers[0])
 
+    async def test_adapter_uses_updated_search_text_for_real_search(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("python",),
+                ),
+                search_text="old",
+            )
+            search_runner = FakeSearchRunner()
+            adapter = TelegramCommandAdapter(service, search_runner=search_runner)
+
+            await adapter.handle_message(FakeMessage("/set_search python backend"))
+            await adapter.handle_message(FakeMessage("/search"))
+
+            self.assertEqual(search_runner.search_text, "python backend")
+
     async def test_adapter_explains_missing_oauth_token_for_real_search(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
@@ -147,6 +168,7 @@ if __name__ == "__main__":
 class FakeSearchRunner:
     def __init__(self) -> None:
         self.was_called = False
+        self.search_text = ""
 
     async def fetch_vacancies(self) -> list[Vacancy]:
         self.was_called = True

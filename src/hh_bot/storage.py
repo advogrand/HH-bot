@@ -218,6 +218,27 @@ class SQLiteStore:
     def get_selected_resume_id(self) -> str | None:
         return self._get_setting("selected_resume_id")
 
+    def save_search_text(self, search_text: str) -> None:
+        self._set_setting("search_text", search_text)
+
+    def get_search_text(self) -> str | None:
+        return self._get_setting("search_text")
+
+    def save_min_score(self, min_score: int) -> None:
+        self._set_setting("min_score", str(min_score))
+
+    def get_min_score(self) -> int | None:
+        value = self._get_setting("min_score")
+        if value is None:
+            return None
+        return int(value)
+
+    def save_cover_letter(self, cover_letter: str) -> None:
+        self._set_setting("cover_letter", cover_letter)
+
+    def get_cover_letter(self) -> str | None:
+        return self._get_setting("cover_letter")
+
     def _set_setting(self, key: str, value: str) -> None:
         conn = self._connect()
         try:
