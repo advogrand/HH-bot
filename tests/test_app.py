@@ -30,6 +30,10 @@ class AppTests(unittest.TestCase):
                 hh_search_area="1",
                 hh_search_per_page=10,
                 enable_real_apply=False,
+                enable_browser_search=False,
+                browser_search_limit=10,
+                browser_headless=False,
+                browser_user_data_dir=".hh-browser-profile",
             )
             SQLiteStore(settings.database_path).initialize()
             store = SQLiteStore(settings.database_path)

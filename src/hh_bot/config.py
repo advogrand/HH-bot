@@ -27,6 +27,10 @@ class Settings:
     hh_search_area: str | None
     hh_search_per_page: int
     enable_real_apply: bool
+    enable_browser_search: bool
+    browser_search_limit: int
+    browser_headless: bool
+    browser_user_data_dir: str
 
 
 def load_settings() -> Settings:
@@ -54,6 +58,10 @@ def load_settings() -> Settings:
         hh_search_area=env.get("HH_SEARCH_AREA") or None,
         hh_search_per_page=int(env.get("HH_SEARCH_PER_PAGE", "20")),
         enable_real_apply=_bool_env(env, "ENABLE_REAL_APPLY"),
+        enable_browser_search=_bool_env(env, "ENABLE_BROWSER_SEARCH"),
+        browser_search_limit=int(env.get("BROWSER_SEARCH_LIMIT", "10")),
+        browser_headless=_bool_env(env, "BROWSER_HEADLESS"),
+        browser_user_data_dir=env.get("BROWSER_USER_DATA_DIR", ".hh-browser-profile"),
     )
 
 

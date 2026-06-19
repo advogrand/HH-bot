@@ -71,6 +71,7 @@ Supported commands:
 - `/set_resume <resume_id>`
 - `/set_letter <cover letter text>`
 - `/search`
+- `/browser_search [search phrase]`
 - `/approve <vacancy_id>`
 - `/reject <vacancy_id>`
 - `/stop`
@@ -134,6 +135,25 @@ ENABLE_REAL_APPLY=1
 ```
 
 Keep it off until OAuth, resume selection, search quality, and cover letter text are manually verified.
+
+## Assisted Browser Search
+
+When applicant API access is unavailable, enable visible Playwright-assisted search:
+
+```powershell
+ENABLE_BROWSER_SEARCH=1
+BROWSER_SEARCH_LIMIT=10
+BROWSER_HEADLESS=0
+BROWSER_USER_DATA_DIR=.hh-browser-profile
+```
+
+Then use:
+
+```text
+/browser_search python backend
+```
+
+The bot opens a visible Chromium profile, navigates to hh.ru search, reads visible vacancy cards, scores them, and shows matches in Telegram. The user must log in, solve SMS/captcha, and handle any hh.ru restrictions manually. This mode must not use stealth, captcha bypass, hidden headless actions, or mass automatic responses.
 
 ## Select Resume
 

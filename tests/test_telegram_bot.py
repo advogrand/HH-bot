@@ -141,6 +141,29 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Python Developer", message.answers[0])
             self.assertIn("/use_resume resume-1", message.answers[0])
 
+    async def test_adapter_fetches_browser_vacancies_before_browser_search(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("python",),
+                ),
+                search_text="python",
+            )
+            browser_runner = FakeBrowserRunner()
+            adapter = TelegramCommandAdapter(service, browser_runner=browser_runner)
+            message = FakeMessage("/browser_search")
+
+            await adapter.handle_message(message)
+
+            self.assertTrue(browser_runner.was_called)
+            self.assertEqual(browser_runner.search_text, "python")
+            self.assertIn("Python Developer", message.answers[-1])
+
     async def test_adapter_uses_apply_runner_for_approve(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
@@ -211,6 +234,25 @@ class EmptySearchRunner:
 class ErrorSearchRunner:
     async def fetch_vacancies(self) -> list[Vacancy]:
         raise HhVacancySearchError("hh.ru API denied vacancy search. Connect hh.ru with /connect.")
+
+
+class FakeBrowserRunner:
+    def __init__(self) -> None:
+        self.was_called = False
+        self.search_text = ""
+
+    async def fetch_vacancies(self) -> list[Vacancy]:
+        self.was_called = True
+        return [
+            Vacancy(
+                id="browser-1",
+                name="Python Developer",
+                employer_name="Acme",
+                url="https://hh.ru/vacancy/browser-1",
+                description="Python backend",
+                relations=("browser_apply_available",),
+            )
+        ]
 
 
 class FakeResumeRunner:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from .bot_service import BotService
 from .config import Settings, load_settings
 from .hh_apply_runner import HhApplyRunner
+from .hh_browser import HhBrowserConfig, HhBrowserRunner
 from .hh_resume_runner import HhResumeRunner
 from .models import UserSettings
 from .hh_search_runner import HhSearchRunner
@@ -79,6 +80,20 @@ def build_apply_runner(settings: Settings, store: SQLiteStore) -> HhApplyRunner:
     )
 
 
+def build_browser_runner(settings: Settings) -> HhBrowserRunner | None:
+    if not settings.enable_browser_search:
+        return None
+    return HhBrowserRunner(
+        HhBrowserConfig(
+            search_text=settings.hh_search_text,
+            area=settings.hh_search_area,
+            limit=settings.browser_search_limit,
+            headless=settings.browser_headless,
+            user_data_dir=settings.browser_user_data_dir,
+        )
+    )
+
+
 def main() -> None:
     settings = load_settings()
     if settings.run_oauth_server:
@@ -92,12 +107,14 @@ def main() -> None:
         search_runner = build_search_runner(settings, service.store)
         resume_runner = build_resume_runner(settings, service.store)
         apply_runner = build_apply_runner(settings, service.store)
+        browser_runner = build_browser_runner(settings)
         run_polling_sync(
             service,
             settings.telegram_bot_token,
             search_runner=search_runner,
             resume_runner=resume_runner,
             apply_runner=apply_runner,
+            browser_runner=browser_runner,
         )
         return
 

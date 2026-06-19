@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 from .bot_service import BotService
+from .hh_browser import HhBrowserError
 from .hh_vacancies import HhVacancySearchError
 from .scoring import evaluate_vacancy
 
@@ -15,11 +16,13 @@ class TelegramCommandAdapter:
         search_runner: Any | None = None,
         resume_runner: Any | None = None,
         apply_runner: Any | None = None,
+        browser_runner: Any | None = None,
     ) -> None:
         self.service = service
         self.search_runner = search_runner
         self.resume_runner = resume_runner
         self.apply_runner = apply_runner
+        self.browser_runner = browser_runner
 
     async def handle_message(self, message: Any) -> None:
         text = getattr(message, "text", None) or ""
@@ -42,6 +45,23 @@ class TelegramCommandAdapter:
                 await message.answer("Connect hh.ru first with /connect, then run /resumes again.")
                 return
             self.service.resumes = resumes
+        if command == "/browser_search":
+            if self.browser_runner is None:
+                await message.answer("Browser-assisted search is not configured.")
+                return
+            if hasattr(self.browser_runner, "search_text"):
+                self.browser_runner.search_text = arg.strip() or self.service.search_text
+            try:
+                vacancies = await self.browser_runner.fetch_vacancies()
+            except HhBrowserError as exc:
+                await message.answer(str(exc))
+                return
+            if not vacancies:
+                await message.answer("No visible hh.ru vacancy cards found in browser.")
+                return
+            self.service.vacancies = vacancies
+            await message.answer(self.service.handle_command("/search"))
+            return
         if command == "/approve" and self.apply_runner is not None:
             vacancy = self.service._find_vacancy(arg.strip())
             if vacancy is None:
@@ -82,6 +102,7 @@ def create_dispatcher(
     search_runner: Any | None = None,
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
+    browser_runner: Any | None = None,
 ) -> Any:
     try:
         from aiogram import Dispatcher
@@ -96,6 +117,7 @@ def create_dispatcher(
         search_runner=search_runner,
         resume_runner=resume_runner,
         apply_runner=apply_runner,
+        browser_runner=browser_runner,
     )
     dispatcher = Dispatcher()
 
@@ -115,6 +137,7 @@ def create_dispatcher(
             "set_resume",
             "set_letter",
             "search",
+            "browser_search",
             "approve",
             "reject",
             "stop",
@@ -132,6 +155,7 @@ async def run_polling(
     search_runner: Any | None = None,
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
+    browser_runner: Any | None = None,
 ) -> None:
     try:
         from aiogram import Bot
@@ -146,6 +170,7 @@ async def run_polling(
         search_runner=search_runner,
         resume_runner=resume_runner,
         apply_runner=apply_runner,
+        browser_runner=browser_runner,
     )
     await dispatcher.start_polling(bot)
 
@@ -156,6 +181,7 @@ def run_polling_sync(
     search_runner: Any | None = None,
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
+    browser_runner: Any | None = None,
 ) -> None:
     asyncio.run(
         run_polling(
@@ -164,6 +190,7 @@ def run_polling_sync(
             search_runner=search_runner,
             resume_runner=resume_runner,
             apply_runner=apply_runner,
+            browser_runner=browser_runner,
         )
     )
 

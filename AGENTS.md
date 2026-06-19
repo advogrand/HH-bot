@@ -26,7 +26,7 @@ Default matching approach:
 
 ## HH.ru Integration Rules
 
-Use only official hh.ru API and OAuth flows.
+Prefer official hh.ru API and OAuth flows whenever they are available.
 
 Allowed:
 
@@ -34,12 +34,25 @@ Allowed:
 - API requests to search vacancies, read vacancy details, read suitable resumes, read negotiations, and apply to vacancies.
 - `Authorization: Bearer <access_token>` header for authenticated API calls.
 - Correct `User-Agent` in the format expected by hh.ru, for example `HHBot/0.1 (email@example.com)`.
+- Assisted Playwright mode only when official applicant API access is unavailable.
+
+Assisted Playwright mode rules:
+
+- Browser must be visible by default.
+- The user must log in manually.
+- The user must solve SMS, captcha, tests, and employer questions manually.
+- The bot may read visible vacancy cards and prepare a review plan.
+- The bot may click response controls only after explicit user confirmation.
+- The bot must use conservative pauses and daily limits.
+- The bot must stop immediately on `/stop` or if hh.ru shows captcha, tests, access restrictions, or abnormal behavior.
+- The bot must log each browser-assisted attempt with vacancy id, URL, status, score, reason, and user action.
 
 Forbidden:
 
-- Scraping hh.ru pages.
-- Browser automation that simulates user actions on hh.ru.
-- Parsing private hh.ru web pages outside the official API.
+- Headless hidden automation for hh.ru actions.
+- Stealth plugins, bot-detection bypass, captcha bypass, or rate-limit bypass.
+- Fully automatic mass responses.
+- Parsing private hh.ru web pages outside official API or assisted visible browser mode.
 - Storing or asking for hh.ru login/password.
 - Bypassing captcha, tests, account restrictions, rate limits, or API access limits.
 - Sending misleading, spammy, or invented information to employers.
@@ -65,7 +78,7 @@ Response flow:
 4. Generate or select short cover letter.
 5. Show candidate in Telegram.
 6. Wait for `/approve` or explicit approve button.
-7. Send response through hh.ru API.
+7. Send response through hh.ru API when available, or through assisted visible browser mode when explicitly enabled and confirmed.
 8. Save audit log entry.
 
 Automatic responses are allowed only if a later implementation explicitly adds a strict auto mode and the user enables it in settings.
@@ -250,4 +263,3 @@ Default user safety:
 - `/stop` must stop sending/searching work.
 - User can inspect queued vacancies before sending.
 - User can reject a vacancy and avoid seeing it again.
-
