@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+from collections.abc import Mapping
 
 
 @dataclass(frozen=True)
@@ -13,18 +15,66 @@ class Settings:
     hh_user_agent: str
     database_path: str
     default_min_score: int
+    run_telegram_polling: bool
+    default_resume_id: str
+    default_cover_letter: str
+    include_keywords: tuple[str, ...]
+    exclude_keywords: tuple[str, ...]
 
 
 def load_settings() -> Settings:
+    env = load_dotenv_file(Path(".env"), existing=os.environ)
     return Settings(
-        telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
-        hh_client_id=os.getenv("HH_CLIENT_ID", ""),
-        hh_client_secret=os.getenv("HH_CLIENT_SECRET", ""),
-        hh_redirect_uri=os.getenv(
+        telegram_bot_token=env.get("TELEGRAM_BOT_TOKEN", ""),
+        hh_client_id=env.get("HH_CLIENT_ID", ""),
+        hh_client_secret=env.get("HH_CLIENT_SECRET", ""),
+        hh_redirect_uri=env.get(
             "HH_REDIRECT_URI",
             "http://localhost:8000/oauth/hh/callback",
         ),
-        hh_user_agent=os.getenv("HH_USER_AGENT", "HHBot/0.1 (you@example.com)"),
-        database_path=os.getenv("DATABASE_PATH", "hh_bot.sqlite3"),
-        default_min_score=int(os.getenv("DEFAULT_MIN_SCORE", "60")),
+        hh_user_agent=env.get("HH_USER_AGENT", "HHBot/0.1 (you@example.com)"),
+        database_path=env.get("DATABASE_PATH", "hh_bot.sqlite3"),
+        default_min_score=int(env.get("DEFAULT_MIN_SCORE", "60")),
+        run_telegram_polling=_bool_env(env, "RUN_TELEGRAM_POLLING"),
+        default_resume_id=env.get("DEFAULT_RESUME_ID", "local-dry-run-resume"),
+        default_cover_letter=env.get("DEFAULT_COVER_LETTER", ""),
+        include_keywords=_csv_env(env, "INCLUDE_KEYWORDS"),
+        exclude_keywords=_csv_env(env, "EXCLUDE_KEYWORDS"),
     )
+
+
+def load_dotenv_file(
+    path: str | Path,
+    *,
+    existing: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    values = dict(existing or {})
+    env_path = Path(path)
+    if not env_path.exists():
+        return values
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, raw_value = line.split("=", 1)
+        key = key.strip()
+        if not key or key in values:
+            continue
+        values[key] = _strip_quotes(raw_value.strip())
+    return values
+
+
+def _strip_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
+def _bool_env(env: Mapping[str, str], name: str) -> bool:
+    return env.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _csv_env(env: Mapping[str, str], name: str) -> tuple[str, ...]:
+    raw = env.get(name, "")
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
