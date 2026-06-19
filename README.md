@@ -69,7 +69,7 @@ Supported commands:
 - `/reject <vacancy_id>`
 - `/stop`
 
-In this version `/search` uses an in-memory dry-run vacancy source. hh.ru OAuth skeleton is present; real hh.ru vacancy search will come in the next integration slice.
+In this version `/search` uses saved hh.ru OAuth token when present, fetches vacancies from official `GET https://api.hh.ru/vacancies`, scores them locally, and still records approvals as dry-run only. If no token is saved yet, `/search` falls back to the in-memory dry-run source.
 
 ## Run hh.ru OAuth Callback Server
 
@@ -100,3 +100,15 @@ http://localhost:8000/oauth/hh/start?state=local-telegram-user
 That route redirects to hh.ru OAuth. After login and consent, hh.ru redirects back to `/oauth/hh/callback`, the app exchanges `code` for `access_token`/`refresh_token`, and saves the token pair in local SQLite.
 
 Development storage note: OAuth tokens are currently stored in local SQLite for the developer machine only. Do not commit `*.sqlite3`, do not log token values, and replace this with encrypted/managed secret storage before production deployment.
+
+## Configure hh.ru Vacancy Search
+
+These values control the first real search slice:
+
+```powershell
+HH_SEARCH_TEXT=python
+HH_SEARCH_AREA=1
+HH_SEARCH_PER_PAGE=20
+```
+
+`HH_SEARCH_AREA=1` is Moscow in hh.ru dictionaries. Leave it empty to search across all areas available to the account. Search results are only used for local scoring and Telegram review; `/approve` still creates a dry-run audit entry and does not send a real hh.ru response.

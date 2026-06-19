@@ -23,6 +23,9 @@ class Settings:
     oauth_start_url: str
     oauth_state: str
     run_oauth_server: bool
+    hh_search_text: str
+    hh_search_area: str | None
+    hh_search_per_page: int
 
 
 def load_settings() -> Settings:
@@ -46,6 +49,9 @@ def load_settings() -> Settings:
         oauth_start_url=env.get("OAUTH_START_URL", "http://localhost:8000/oauth/hh/start"),
         oauth_state=env.get("OAUTH_STATE", "local-telegram-user"),
         run_oauth_server=_bool_env(env, "RUN_OAUTH_SERVER"),
+        hh_search_text=env.get("HH_SEARCH_TEXT", "python"),
+        hh_search_area=env.get("HH_SEARCH_AREA") or None,
+        hh_search_per_page=int(env.get("HH_SEARCH_PER_PAGE", "20")),
     )
 
 

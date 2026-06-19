@@ -3,6 +3,7 @@ from __future__ import annotations
 from .bot_service import BotService
 from .config import Settings, load_settings
 from .models import UserSettings
+from .hh_search_runner import HhSearchRunner
 from .oauth import HhOAuthConfig
 from .oauth_web import create_oauth_app
 from .storage import SQLiteStore
@@ -41,6 +42,17 @@ def build_oauth_app(settings: Settings):
     )
 
 
+def build_search_runner(settings: Settings, store: SQLiteStore) -> HhSearchRunner:
+    return HhSearchRunner(
+        store=store,
+        oauth_state=settings.oauth_state,
+        user_agent=settings.hh_user_agent,
+        search_text=settings.hh_search_text,
+        area=settings.hh_search_area,
+        per_page=settings.hh_search_per_page,
+    )
+
+
 def main() -> None:
     settings = load_settings()
     if settings.run_oauth_server:
@@ -51,7 +63,8 @@ def main() -> None:
 
     service = build_service(settings)
     if settings.run_telegram_polling:
-        run_polling_sync(service, settings.telegram_bot_token)
+        search_runner = build_search_runner(settings, service.store)
+        run_polling_sync(service, settings.telegram_bot_token, search_runner=search_runner)
         return
 
     print("HH Telegram Bot dry-run foundation ready.")

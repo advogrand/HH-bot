@@ -25,6 +25,9 @@ class AppTests(unittest.TestCase):
                 oauth_start_url="http://localhost:8000/oauth/hh/start",
                 oauth_state="telegram-user-1",
                 run_oauth_server=False,
+                hh_search_text="python",
+                hh_search_area="1",
+                hh_search_per_page=10,
             )
 
             service = build_service(settings)

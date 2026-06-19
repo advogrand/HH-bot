@@ -7,11 +7,18 @@ from .bot_service import BotService
 
 
 class TelegramCommandAdapter:
-    def __init__(self, service: BotService) -> None:
+    def __init__(self, service: BotService, search_runner: Any | None = None) -> None:
         self.service = service
+        self.search_runner = search_runner
 
     async def handle_message(self, message: Any) -> None:
         text = getattr(message, "text", None) or ""
+        if text.strip().partition(" ")[0] == "/search" and self.search_runner is not None:
+            vacancies = await self.search_runner.fetch_vacancies()
+            if not vacancies:
+                await message.answer("Connect hh.ru first with /connect, then run /search again.")
+                return
+            self.service.vacancies = vacancies
         response = self.service.handle_command(text)
         await message.answer(response)
 
@@ -23,7 +30,7 @@ def ensure_bot_token(token: str) -> str:
     return normalized
 
 
-def create_dispatcher(service: BotService) -> Any:
+def create_dispatcher(service: BotService, search_runner: Any | None = None) -> Any:
     try:
         from aiogram import Dispatcher
         from aiogram.filters import Command, CommandStart
@@ -32,7 +39,7 @@ def create_dispatcher(service: BotService) -> Any:
             "aiogram is not installed. Run `python -m pip install -e .` first."
         ) from exc
 
-    adapter = TelegramCommandAdapter(service)
+    adapter = TelegramCommandAdapter(service, search_runner=search_runner)
     dispatcher = Dispatcher()
 
     @dispatcher.message(CommandStart())
@@ -46,7 +53,11 @@ def create_dispatcher(service: BotService) -> Any:
     return dispatcher
 
 
-async def run_polling(service: BotService, token: str) -> None:
+async def run_polling(
+    service: BotService,
+    token: str,
+    search_runner: Any | None = None,
+) -> None:
     try:
         from aiogram import Bot
     except ImportError as exc:
@@ -55,12 +66,16 @@ async def run_polling(service: BotService, token: str) -> None:
         ) from exc
 
     bot = Bot(ensure_bot_token(token))
-    dispatcher = create_dispatcher(service)
+    dispatcher = create_dispatcher(service, search_runner=search_runner)
     await dispatcher.start_polling(bot)
 
 
-def run_polling_sync(service: BotService, token: str) -> None:
-    asyncio.run(run_polling(service, token))
+def run_polling_sync(
+    service: BotService,
+    token: str,
+    search_runner: Any | None = None,
+) -> None:
+    asyncio.run(run_polling(service, token, search_runner=search_runner))
 
 
 class _message_with_text:

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from hh_bot.bot_service import BotService
 from hh_bot.models import UserSettings
+from hh_bot.models import Vacancy
 from hh_bot.storage import SQLiteStore
 from hh_bot.telegram_bot import TelegramCommandAdapter, ensure_bot_token
 
@@ -44,6 +45,46 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(message.answers), 1)
             self.assertIn("Unknown command", message.answers[0])
 
+    async def test_adapter_fetches_real_vacancies_before_search_when_runner_exists(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("python",),
+                ),
+            )
+            search_runner = FakeSearchRunner()
+            adapter = TelegramCommandAdapter(service, search_runner=search_runner)
+            message = FakeMessage("/search")
+
+            await adapter.handle_message(message)
+
+            self.assertTrue(search_runner.was_called)
+            self.assertIn("Python Developer", message.answers[0])
+
+    async def test_adapter_explains_missing_oauth_token_for_real_search(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("python",),
+                ),
+            )
+            adapter = TelegramCommandAdapter(service, search_runner=EmptySearchRunner())
+            message = FakeMessage("/search")
+
+            await adapter.handle_message(message)
+
+            self.assertIn("Connect hh.ru first", message.answers[0])
+
 
 class TelegramConfigTests(unittest.TestCase):
     def test_ensure_bot_token_rejects_missing_token(self):
@@ -56,3 +97,25 @@ class TelegramConfigTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FakeSearchRunner:
+    def __init__(self) -> None:
+        self.was_called = False
+
+    async def fetch_vacancies(self) -> list[Vacancy]:
+        self.was_called = True
+        return [
+            Vacancy(
+                id="1",
+                name="Python Developer",
+                employer_name="Acme",
+                url="https://hh.ru/vacancy/1",
+                description="Python backend",
+            )
+        ]
+
+
+class EmptySearchRunner:
+    async def fetch_vacancies(self) -> list[Vacancy]:
+        return []
