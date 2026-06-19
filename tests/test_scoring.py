@@ -65,6 +65,27 @@ class ScoringTests(unittest.TestCase):
         self.assertGreaterEqual(result.score, 60)
         self.assertIn("matched keywords", result.reason)
 
+    def test_single_include_keyword_match_can_pass_default_threshold(self):
+        vacancy = Vacancy(
+            id="4",
+            name="Python Developer",
+            employer_name="Acme",
+            url="https://hh.ru/vacancy/4",
+            description="Backend services",
+        )
+        settings = UserSettings(
+            resume_id="resume-1",
+            cover_letter="Hello",
+            include_keywords=("python", "fastapi", "telegram"),
+            min_score=60,
+        )
+
+        result = evaluate_vacancy(vacancy, settings, already_applied=False)
+
+        self.assertTrue(result.is_match)
+        self.assertGreaterEqual(result.score, 60)
+        self.assertEqual(result.reason, "matched keywords: python")
+
 
 if __name__ == "__main__":
     unittest.main()

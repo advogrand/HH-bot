@@ -47,6 +47,35 @@ class BotServiceTests(unittest.TestCase):
             self.assertIn("Python Developer", message)
             self.assertIn("/approve 1", message)
 
+    def test_search_reports_near_misses_when_browser_cards_do_not_pass_filters(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("python", "fastapi", "telegram"),
+                    min_score=90,
+                ),
+                vacancies=[
+                    Vacancy(
+                        id="1",
+                        name="Python Developer",
+                        employer_name="Acme",
+                        url="https://hh.ru/vacancy/1",
+                        description="Backend services",
+                    )
+                ],
+            )
+
+            message = service.handle_command("/search")
+
+            self.assertIn("Found 1 vacancies, but none passed filters", message)
+            self.assertIn("Python Developer", message)
+            self.assertIn("matched keywords: python", message)
+
     def test_approve_records_dry_run_audit_entry(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")

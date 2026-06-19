@@ -30,7 +30,10 @@ def evaluate_vacancy(
 
     score = 40
     if settings.include_keywords:
-        score = int((len(matched) / len(settings.include_keywords)) * 80)
+        if matched:
+            score = 60 + int((len(matched) / len(settings.include_keywords)) * 35)
+        else:
+            score = 0
     if settings.preferred_schedule and vacancy.schedule:
         if settings.preferred_schedule.lower() == vacancy.schedule.lower():
             score += 15

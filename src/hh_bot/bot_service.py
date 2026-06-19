@@ -157,14 +157,37 @@ class BotService:
             return "Search is stopped. Restart the process before searching again."
 
         candidates: list[str] = []
+        near_misses: list[tuple[int, str]] = []
         for vacancy in self.vacancies:
             already_applied = self.store.has_response(self.settings.resume_id, vacancy.id)
             score = evaluate_vacancy(vacancy, self.settings, already_applied=already_applied)
             if score.is_match:
                 candidates.append(render_candidate_message(vacancy, score, self.settings))
+            else:
+                near_misses.append(
+                    (
+                        score.score,
+                        "\n".join(
+                            [
+                                f"- {vacancy.name} ({score.score}/100)",
+                                f"  Reason: {score.reason}",
+                                f"  URL: {vacancy.url}",
+                            ]
+                        ),
+                    )
+                )
 
         if not candidates:
-            return "No matching vacancies found in dry-run source."
+            if not self.vacancies:
+                return "No vacancies loaded. Run /search or /browser_search first."
+            near_misses.sort(key=lambda item: item[0], reverse=True)
+            details = "\n".join(item[1] for item in near_misses[:5])
+            return (
+                f"Found {len(self.vacancies)} vacancies, but none passed filters.\n"
+                f"Minimum score: {self.settings.min_score}\n"
+                "Try /set_score 60 or adjust /set_search.\n\n"
+                f"Top near misses:\n{details}"
+            )
         return "\n\n---\n\n".join(candidates)
 
     def _approve(self, vacancy_id: str) -> str:
