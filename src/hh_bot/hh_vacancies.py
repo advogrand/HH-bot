@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from .hh_client import HhClient
 from .models import Vacancy
 
 
@@ -24,11 +25,15 @@ class SearchQuery:
         return params
 
 
+class HhVacancySearchError(Exception):
+    pass
+
+
 class HhVacancyClient:
     def __init__(
         self,
         *,
-        access_token: str,
+        access_token: str | None,
         user_agent: str,
         http_client: Any | None = None,
         vacancies_url: str = "https://api.hh.ru/vacancies",
@@ -48,16 +53,19 @@ class HhVacancyClient:
             return await self._search_with_client(client, query)
 
     async def _search_with_client(self, client: Any, query: SearchQuery) -> list[Vacancy]:
+        headers = {"User-Agent": self.user_agent}
+        if self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
         response = await client.get(
             self.vacancies_url,
-            headers={
-                "Authorization": f"Bearer {self.access_token}",
-                "User-Agent": self.user_agent,
-            },
+            headers=headers,
             params=query.to_params(),
         )
-        response.raise_for_status()
         payload = response.json()
+        if response.status_code >= 400:
+            error = HhClient.parse_error_response(response.status_code, payload).error
+            message = error.user_message if error is not None else "hh.ru vacancy search failed."
+            raise HhVacancySearchError(message)
         items = payload.get("items", [])
         if not isinstance(items, list):
             return []

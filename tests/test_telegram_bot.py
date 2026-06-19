@@ -4,6 +4,7 @@ from pathlib import Path
 
 from hh_bot.bot_service import BotService
 from hh_bot.hh_apply import ApplyResult
+from hh_bot.hh_vacancies import HhVacancySearchError
 from hh_bot.models import Resume, UserSettings, Vacancy
 from hh_bot.storage import SQLiteStore
 from hh_bot.telegram_bot import TelegramCommandAdapter, ensure_bot_token
@@ -87,7 +88,7 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(search_runner.search_text, "python backend")
 
-    async def test_adapter_explains_missing_oauth_token_for_real_search(self):
+    async def test_adapter_explains_empty_search_result(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
             store.initialize()
@@ -104,7 +105,26 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
 
             await adapter.handle_message(message)
 
-            self.assertIn("Connect hh.ru first", message.answers[0])
+            self.assertIn("No vacancies found", message.answers[0])
+
+    async def test_adapter_explains_hh_search_api_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("python",),
+                ),
+            )
+            adapter = TelegramCommandAdapter(service, search_runner=ErrorSearchRunner())
+            message = FakeMessage("/search")
+
+            await adapter.handle_message(message)
+
+            self.assertIn("hh.ru API denied vacancy search", message.answers[0])
 
     async def test_adapter_fetches_resumes_before_resumes_command(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -186,6 +206,11 @@ class FakeSearchRunner:
 class EmptySearchRunner:
     async def fetch_vacancies(self) -> list[Vacancy]:
         return []
+
+
+class ErrorSearchRunner:
+    async def fetch_vacancies(self) -> list[Vacancy]:
+        raise HhVacancySearchError("hh.ru API denied vacancy search. Connect hh.ru with /connect.")
 
 
 class FakeResumeRunner:

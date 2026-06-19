@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 from .bot_service import BotService
+from .hh_vacancies import HhVacancySearchError
 from .scoring import evaluate_vacancy
 
 
@@ -26,9 +27,13 @@ class TelegramCommandAdapter:
         if command == "/search" and self.search_runner is not None:
             if hasattr(self.search_runner, "search_text"):
                 self.search_runner.search_text = self.service.search_text
-            vacancies = await self.search_runner.fetch_vacancies()
+            try:
+                vacancies = await self.search_runner.fetch_vacancies()
+            except HhVacancySearchError as exc:
+                await message.answer(str(exc))
+                return
             if not vacancies:
-                await message.answer("Connect hh.ru first with /connect, then run /search again.")
+                await message.answer("No vacancies found. Check /settings and try another /set_search query.")
                 return
             self.service.vacancies = vacancies
         if command == "/resumes" and self.resume_runner is not None:

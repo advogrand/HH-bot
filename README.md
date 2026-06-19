@@ -75,7 +75,7 @@ Supported commands:
 - `/reject <vacancy_id>`
 - `/stop`
 
-In this version `/search` uses saved hh.ru OAuth token when present, fetches vacancies from official `GET https://api.hh.ru/vacancies`, scores them locally, and still records approvals as dry-run only. If no token is saved yet, `/search` falls back to the in-memory dry-run source.
+In this version `/search` uses saved hh.ru OAuth token when present, fetches vacancies from official `GET https://api.hh.ru/vacancies`, scores them locally, and still records approvals as dry-run only. If no token is saved yet, `/search` tries the same official vacancy search endpoint without an `Authorization` header. If hh.ru returns `403 forbidden`, the bot shows a user-visible message and waits for OAuth access after the app is approved.
 
 ## Run hh.ru OAuth Callback Server
 
@@ -117,7 +117,7 @@ HH_SEARCH_AREA=1
 HH_SEARCH_PER_PAGE=20
 ```
 
-`HH_SEARCH_AREA=1` is Moscow in hh.ru dictionaries. Leave it empty to search across all areas available to the account. Search results are only used for local scoring and Telegram review; `/approve` still creates a dry-run audit entry and does not send a real hh.ru response.
+`HH_SEARCH_AREA=1` is Moscow in hh.ru dictionaries. Leave it empty to search across all areas available to the account. Search results are only used for local scoring and Telegram review. Without an OAuth token the bot can only try public vacancy search and must respect `403 forbidden` or other API restrictions. It cannot read private account state, list resumes, or send real responses. `/approve` still creates a dry-run audit entry and does not send a real hh.ru response unless `ENABLE_REAL_APPLY=1` is explicitly enabled later.
 
 ## Apply Safety
 

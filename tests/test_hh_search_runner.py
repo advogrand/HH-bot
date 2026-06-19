@@ -10,9 +10,9 @@ from hh_bot.storage import SQLiteStore
 
 class FakeVacancyClientFactory:
     def __init__(self) -> None:
-        self.calls: list[tuple[str, str]] = []
+        self.calls: list[tuple[str | None, str]] = []
 
-    def __call__(self, *, access_token: str, user_agent: str):
+    def __call__(self, *, access_token: str | None, user_agent: str):
         self.calls.append((access_token, user_agent))
         return FakeVacancyClient()
 
@@ -59,20 +59,23 @@ class HhSearchRunnerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(vacancies[0].name, "Python Developer")
             self.assertEqual(factory.calls, [("access-1", "HHBot/0.1")])
 
-    async def test_missing_token_returns_empty_list(self):
+    async def test_missing_token_uses_public_vacancy_search(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
             store.initialize()
+            factory = FakeVacancyClientFactory()
             runner = HhSearchRunner(
                 store=store,
                 oauth_state="telegram-user-1",
                 user_agent="HHBot/0.1",
                 search_text="python",
+                vacancy_client_factory=factory,
             )
 
             vacancies = await runner.fetch_vacancies()
 
-            self.assertEqual(vacancies, [])
+            self.assertEqual(vacancies[0].name, "Python Developer")
+            self.assertEqual(factory.calls, [(None, "HHBot/0.1")])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,11 @@
 import unittest
 
-from hh_bot.hh_vacancies import HhVacancyClient, SearchQuery, map_vacancy
+from hh_bot.hh_vacancies import (
+    HhVacancyClient,
+    HhVacancySearchError,
+    SearchQuery,
+    map_vacancy,
+)
 
 
 class FakeResponse:
@@ -41,6 +46,11 @@ class FakeHttpClient:
                 ]
             },
         )
+
+
+class ForbiddenHttpClient:
+    async def get(self, url: str, *, headers: dict, params: dict) -> FakeResponse:
+        return FakeResponse(403, {"errors": [{"type": "forbidden"}]})
 
 
 class HhVacancyTests(unittest.IsolatedAsyncioTestCase):
@@ -91,6 +101,30 @@ class HhVacancyTests(unittest.IsolatedAsyncioTestCase):
             fake_http.gets[0][2],
             {"text": "python", "area": "1", "per_page": 5, "page": 0},
         )
+
+    async def test_search_vacancies_without_token_omits_authorization_header(self):
+        fake_http = FakeHttpClient()
+        client = HhVacancyClient(
+            access_token=None,
+            user_agent="HHBot/0.1",
+            http_client=fake_http,
+        )
+
+        vacancies = await client.search_vacancies(SearchQuery(text="python"))
+
+        self.assertEqual(len(vacancies), 1)
+        self.assertNotIn("Authorization", fake_http.gets[0][1])
+        self.assertEqual(fake_http.gets[0][1]["User-Agent"], "HHBot/0.1")
+
+    async def test_search_vacancies_maps_forbidden_response_to_search_error(self):
+        client = HhVacancyClient(
+            access_token=None,
+            user_agent="HHBot/0.1",
+            http_client=ForbiddenHttpClient(),
+        )
+
+        with self.assertRaisesRegex(HhVacancySearchError, "hh.ru API denied vacancy search"):
+            await client.search_vacancies(SearchQuery(text="python"))
 
 
 if __name__ == "__main__":

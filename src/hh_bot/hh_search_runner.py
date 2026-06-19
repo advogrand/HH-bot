@@ -29,10 +29,8 @@ class HhSearchRunner:
 
     async def fetch_vacancies(self) -> list[Vacancy]:
         token = self.store.get_oauth_token(self.oauth_state)
-        if token is None:
-            return []
         client = self.vacancy_client_factory(
-            access_token=token.access_token,
+            access_token=token.access_token if token is not None else None,
             user_agent=self.user_agent,
         )
         return await client.search_vacancies(

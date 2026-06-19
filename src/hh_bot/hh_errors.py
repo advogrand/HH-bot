@@ -21,6 +21,7 @@ _KNOWN_MESSAGES = {
     "token_expired": "hh.ru token expired. Reconnect or refresh authorization.",
     "token_revoked": "hh.ru token was revoked. Reconnect account.",
     "bad_authorization": "hh.ru authorization failed. Reconnect account.",
+    "forbidden": "hh.ru API denied vacancy search. Connect hh.ru with /connect after the app is approved.",
     "resume_not_found": "Resume is hidden, deleted, or unavailable.",
     "resume_deleted": "Resume is deleted or hidden.",
     "invalid_vacancy": "Vacancy is archived, hidden, or unavailable.",
