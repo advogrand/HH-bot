@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from .models import AuditEntry, UserSettings, Vacancy
+from dataclasses import replace
+
+from .models import AuditEntry, Resume, UserSettings, Vacancy
 from .scoring import evaluate_vacancy
 from .storage import SQLiteStore
 from .telegram_messages import render_candidate_message
@@ -13,14 +15,20 @@ class BotService:
         store: SQLiteStore,
         settings: UserSettings,
         vacancies: list[Vacancy] | None = None,
+        resumes: list[Resume] | None = None,
         oauth_start_url: str | None = None,
         oauth_state: str = "local-telegram-user",
+        search_text: str = "",
+        search_area: str | None = None,
     ) -> None:
         self.store = store
         self.settings = settings
         self.vacancies = vacancies or []
+        self.resumes = resumes or []
         self.oauth_start_url = oauth_start_url
         self.oauth_state = oauth_state
+        self.search_text = search_text
+        self.search_area = search_area
         self.is_stopped = False
 
     def handle_command(self, command: str) -> str:
@@ -41,9 +49,13 @@ class BotService:
             return self._settings()
         if name == "/connect":
             return self._connect()
+        if name == "/resumes":
+            return self._resumes()
+        if name == "/use_resume":
+            return self._use_resume(arg.strip())
         return (
-            "Unknown command. Use /start, /connect, /status, /settings, /search, "
-            "/approve, /reject, or /stop."
+            "Unknown command. Use /start, /connect, /resumes, /use_resume, /status, "
+            "/settings, /search, /approve, /reject, or /stop."
         )
 
     def _start(self) -> str:
@@ -53,9 +65,14 @@ class BotService:
         )
 
     def _settings(self) -> str:
+        connected = "yes" if self.store.has_oauth_token(self.oauth_state) else "no"
+        area = self.search_area or "any"
         return (
+            f"hh.ru connected: {connected}\n"
             f"Resume: {self.settings.resume_id}\n"
             f"Minimum score: {self.settings.min_score}\n"
+            f"Search text: {self.search_text or 'not set'}\n"
+            f"Search area: {area}\n"
             f"Include keywords: {', '.join(self.settings.include_keywords) or 'none'}\n"
             f"Exclude keywords: {', '.join(self.settings.exclude_keywords) or 'none'}"
         )
@@ -65,6 +82,23 @@ class BotService:
             return "hh.ru OAuth is not configured yet. Set HH_CLIENT_ID, HH_CLIENT_SECRET, and HH_REDIRECT_URI."
         separator = "&" if "?" in self.oauth_start_url else "?"
         return f"Connect hh.ru: {self.oauth_start_url}{separator}state={self.oauth_state}"
+
+    def _resumes(self) -> str:
+        if not self.resumes:
+            return "No resumes loaded. Connect hh.ru with /connect, then run /resumes again."
+        lines = ["Available resumes:"]
+        for resume in self.resumes:
+            marker = " selected" if resume.id == self.settings.resume_id else ""
+            lines.append(f"- {resume.title} ({resume.id}){marker}: /use_resume {resume.id}")
+        return "\n".join(lines)
+
+    def _use_resume(self, resume_id: str) -> str:
+        for resume in self.resumes:
+            if resume.id == resume_id:
+                self.settings = replace(self.settings, resume_id=resume.id)
+                self.store.save_selected_resume_id(resume.id)
+                return f"Selected resume: {resume.title} ({resume.id})"
+        return f"Resume {resume_id or '<empty>'} not found. Run /resumes first."
 
     def _status(self) -> str:
         audit_count = len(self.store.list_audit_entries())

@@ -62,6 +62,8 @@ Supported commands:
 
 - `/start`
 - `/connect`
+- `/resumes`
+- `/use_resume <resume_id>`
 - `/status`
 - `/settings`
 - `/search`
@@ -112,3 +114,19 @@ HH_SEARCH_PER_PAGE=20
 ```
 
 `HH_SEARCH_AREA=1` is Moscow in hh.ru dictionaries. Leave it empty to search across all areas available to the account. Search results are only used for local scoring and Telegram review; `/approve` still creates a dry-run audit entry and does not send a real hh.ru response.
+
+## Select Resume
+
+After connecting hh.ru, run:
+
+```text
+/resumes
+```
+
+The bot calls official `GET https://api.hh.ru/resumes/mine`, lists available resume ids, and shows commands like:
+
+```text
+/use_resume resume-id
+```
+
+Selected resume id is saved in local SQLite and reused on next start. `/settings` shows hh connection state, selected resume id, search text, area, threshold, include keywords, and exclude keywords.

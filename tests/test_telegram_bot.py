@@ -3,8 +3,7 @@ import unittest
 from pathlib import Path
 
 from hh_bot.bot_service import BotService
-from hh_bot.models import UserSettings
-from hh_bot.models import Vacancy
+from hh_bot.models import Resume, UserSettings, Vacancy
 from hh_bot.storage import SQLiteStore
 from hh_bot.telegram_bot import TelegramCommandAdapter, ensure_bot_token
 
@@ -85,6 +84,21 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn("Connect hh.ru first", message.answers[0])
 
+    async def test_adapter_fetches_resumes_before_resumes_command(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(store=store, settings=UserSettings("resume-1", "Hello"))
+            resume_runner = FakeResumeRunner()
+            adapter = TelegramCommandAdapter(service, resume_runner=resume_runner)
+            message = FakeMessage("/resumes")
+
+            await adapter.handle_message(message)
+
+            self.assertTrue(resume_runner.was_called)
+            self.assertIn("Python Developer", message.answers[0])
+            self.assertIn("/use_resume resume-1", message.answers[0])
+
 
 class TelegramConfigTests(unittest.TestCase):
     def test_ensure_bot_token_rejects_missing_token(self):
@@ -119,3 +133,18 @@ class FakeSearchRunner:
 class EmptySearchRunner:
     async def fetch_vacancies(self) -> list[Vacancy]:
         return []
+
+
+class FakeResumeRunner:
+    def __init__(self) -> None:
+        self.was_called = False
+
+    async def fetch_resumes(self) -> list[Resume]:
+        self.was_called = True
+        return [
+            Resume(
+                id="resume-1",
+                title="Python Developer",
+                url="https://api.hh.ru/resumes/resume-1",
+            )
+        ]

@@ -54,6 +54,14 @@ class SQLiteStore:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+                """
+            )
             conn.commit()
         finally:
             conn.close()
@@ -200,6 +208,43 @@ class SQLiteStore:
             expires_in=row["expires_in"],
             token_type=row["token_type"],
         )
+
+    def has_oauth_token(self, state: str) -> bool:
+        return self.get_oauth_token(state) is not None
+
+    def save_selected_resume_id(self, resume_id: str) -> None:
+        self._set_setting("selected_resume_id", resume_id)
+
+    def get_selected_resume_id(self) -> str | None:
+        return self._get_setting("selected_resume_id")
+
+    def _set_setting(self, key: str, value: str) -> None:
+        conn = self._connect()
+        try:
+            conn.execute(
+                """
+                INSERT INTO app_settings (key, value)
+                VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """,
+                (key, value),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _get_setting(self, key: str) -> str | None:
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT value FROM app_settings WHERE key = ?",
+                (key,),
+            ).fetchone()
+        finally:
+            conn.close()
+        if row is None:
+            return None
+        return str(row["value"])
 
     def _connect(self) -> sqlite3.Connection:
         self.path.parent.mkdir(parents=True, exist_ok=True)

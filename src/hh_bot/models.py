@@ -19,6 +19,13 @@ class Vacancy:
 
 
 @dataclass(frozen=True)
+class Resume:
+    id: str
+    title: str
+    url: str
+
+
+@dataclass(frozen=True)
 class UserSettings:
     resume_id: str
     cover_letter: str

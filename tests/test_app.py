@@ -4,6 +4,7 @@ from pathlib import Path
 
 from hh_bot.app import build_service
 from hh_bot.config import Settings
+from hh_bot.storage import SQLiteStore
 
 
 class AppTests(unittest.TestCase):
@@ -29,10 +30,12 @@ class AppTests(unittest.TestCase):
                 hh_search_area="1",
                 hh_search_per_page=10,
             )
+            SQLiteStore(settings.database_path).initialize()
+            SQLiteStore(settings.database_path).save_selected_resume_id("persisted-resume")
 
             service = build_service(settings)
 
-            self.assertEqual(service.settings.resume_id, "resume-x")
+            self.assertEqual(service.settings.resume_id, "persisted-resume")
             self.assertEqual(service.settings.min_score, 77)
             self.assertEqual(service.settings.include_keywords, ("python", "fastapi"))
             self.assertIn("http://localhost:8000/oauth/hh/start", service.handle_command("/connect"))

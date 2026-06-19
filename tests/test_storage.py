@@ -36,6 +36,18 @@ class StorageTests(unittest.TestCase):
             self.assertEqual(rows[0]["vacancy_id"], "vacancy-1")
             self.assertEqual(rows[0]["api_status"], "dry_run")
 
+    def test_saves_and_loads_selected_resume_id(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "bot.sqlite3"
+            store = SQLiteStore(db_path)
+            store.initialize()
+
+            self.assertIsNone(store.get_selected_resume_id())
+
+            store.save_selected_resume_id("resume-1")
+
+            self.assertEqual(store.get_selected_resume_id(), "resume-1")
+
 
 if __name__ == "__main__":
     unittest.main()
