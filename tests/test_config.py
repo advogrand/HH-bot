@@ -21,6 +21,18 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(values["TELEGRAM_BOT_TOKEN"], "existing")
             self.assertEqual(values["DEFAULT_COVER_LETTER"], "Hello there")
 
+    def test_load_dotenv_file_handles_utf8_bom(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env_path = Path(temp_dir) / ".env"
+            env_path.write_text(
+                "TELEGRAM_BOT_TOKEN=from-file\n",
+                encoding="utf-8-sig",
+            )
+
+            values = load_dotenv_file(env_path, existing={})
+
+            self.assertEqual(values["TELEGRAM_BOT_TOKEN"], "from-file")
+
 
 if __name__ == "__main__":
     unittest.main()
