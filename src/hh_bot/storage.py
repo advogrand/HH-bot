@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import AuditEntry
+from .oauth import OAuthToken
 
 
 class SQLiteStore:
@@ -39,6 +40,18 @@ class SQLiteStore:
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_resume_vacancy
                 ON audit_entries (resume_id, vacancy_id)
                 WHERE api_status IN ('sent', 'dry_run')
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS oauth_tokens (
+                    state TEXT PRIMARY KEY,
+                    access_token TEXT NOT NULL,
+                    refresh_token TEXT NOT NULL,
+                    expires_in INTEGER NOT NULL,
+                    token_type TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
                 """
             )
             conn.commit()
@@ -132,6 +145,61 @@ class SQLiteStore:
         finally:
             conn.close()
         return [dict(row) for row in rows]
+
+    def save_oauth_token(self, state: str, token: OAuthToken) -> None:
+        conn = self._connect()
+        try:
+            conn.execute(
+                """
+                INSERT INTO oauth_tokens (
+                    state,
+                    access_token,
+                    refresh_token,
+                    expires_in,
+                    token_type,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(state) DO UPDATE SET
+                    access_token = excluded.access_token,
+                    refresh_token = excluded.refresh_token,
+                    expires_in = excluded.expires_in,
+                    token_type = excluded.token_type,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    state,
+                    token.access_token,
+                    token.refresh_token,
+                    token.expires_in,
+                    token.token_type,
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def get_oauth_token(self, state: str) -> OAuthToken | None:
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                """
+                SELECT access_token, refresh_token, expires_in, token_type
+                FROM oauth_tokens
+                WHERE state = ?
+                """,
+                (state,),
+            ).fetchone()
+        finally:
+            conn.close()
+        if row is None:
+            return None
+        return OAuthToken(
+            access_token=row["access_token"],
+            refresh_token=row["refresh_token"],
+            expires_in=row["expires_in"],
+            token_type=row["token_type"],
+        )
 
     def _connect(self) -> sqlite3.Connection:
         self.path.parent.mkdir(parents=True, exist_ok=True)

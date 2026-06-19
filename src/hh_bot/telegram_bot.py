@@ -39,7 +39,7 @@ def create_dispatcher(service: BotService) -> Any:
     async def start_handler(message: Any) -> None:
         await adapter.handle_message(_message_with_text(message, "/start"))
 
-    @dispatcher.message(Command("status", "settings", "search", "approve", "reject", "stop"))
+    @dispatcher.message(Command("connect", "status", "settings", "search", "approve", "reject", "stop"))
     async def command_handler(message: Any) -> None:
         await adapter.handle_message(message)
 

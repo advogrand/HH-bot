@@ -20,6 +20,9 @@ class Settings:
     default_cover_letter: str
     include_keywords: tuple[str, ...]
     exclude_keywords: tuple[str, ...]
+    oauth_start_url: str
+    oauth_state: str
+    run_oauth_server: bool
 
 
 def load_settings() -> Settings:
@@ -40,6 +43,9 @@ def load_settings() -> Settings:
         default_cover_letter=env.get("DEFAULT_COVER_LETTER", ""),
         include_keywords=_csv_env(env, "INCLUDE_KEYWORDS"),
         exclude_keywords=_csv_env(env, "EXCLUDE_KEYWORDS"),
+        oauth_start_url=env.get("OAUTH_START_URL", "http://localhost:8000/oauth/hh/start"),
+        oauth_state=env.get("OAUTH_STATE", "local-telegram-user"),
+        run_oauth_server=_bool_env(env, "RUN_OAUTH_SERVER"),
     )
 
 

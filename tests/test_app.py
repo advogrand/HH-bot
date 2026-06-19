@@ -22,6 +22,9 @@ class AppTests(unittest.TestCase):
                 default_cover_letter="Hello from settings",
                 include_keywords=("python", "fastapi"),
                 exclude_keywords=("php",),
+                oauth_start_url="http://localhost:8000/oauth/hh/start",
+                oauth_state="telegram-user-1",
+                run_oauth_server=False,
             )
 
             service = build_service(settings)
@@ -29,6 +32,7 @@ class AppTests(unittest.TestCase):
             self.assertEqual(service.settings.resume_id, "resume-x")
             self.assertEqual(service.settings.min_score, 77)
             self.assertEqual(service.settings.include_keywords, ("python", "fastapi"))
+            self.assertIn("http://localhost:8000/oauth/hh/start", service.handle_command("/connect"))
             self.assertEqual(service.store.list_audit_entries(), [])
 
 

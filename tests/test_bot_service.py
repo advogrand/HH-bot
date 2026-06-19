@@ -85,6 +85,22 @@ class BotServiceTests(unittest.TestCase):
             self.assertIn("stopped", message.lower())
             self.assertTrue(service.is_stopped)
 
+    def test_connect_returns_oauth_start_link_when_configured(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings("resume-1", "Hello"),
+                oauth_start_url="http://localhost:8000/oauth/hh/start",
+                oauth_state="telegram-user-1",
+            )
+
+            message = service.handle_command("/connect")
+
+            self.assertIn("Connect hh.ru", message)
+            self.assertIn("http://localhost:8000/oauth/hh/start?state=telegram-user-1", message)
+
 
 if __name__ == "__main__":
     unittest.main()

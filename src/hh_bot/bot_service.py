@@ -13,10 +13,14 @@ class BotService:
         store: SQLiteStore,
         settings: UserSettings,
         vacancies: list[Vacancy] | None = None,
+        oauth_start_url: str | None = None,
+        oauth_state: str = "local-telegram-user",
     ) -> None:
         self.store = store
         self.settings = settings
         self.vacancies = vacancies or []
+        self.oauth_start_url = oauth_start_url
+        self.oauth_state = oauth_state
         self.is_stopped = False
 
     def handle_command(self, command: str) -> str:
@@ -35,7 +39,12 @@ class BotService:
             return self._stop()
         if name == "/settings":
             return self._settings()
-        return "Unknown command. Use /start, /status, /settings, /search, /approve, /reject, or /stop."
+        if name == "/connect":
+            return self._connect()
+        return (
+            "Unknown command. Use /start, /connect, /status, /settings, /search, "
+            "/approve, /reject, or /stop."
+        )
 
     def _start(self) -> str:
         return (
@@ -50,6 +59,12 @@ class BotService:
             f"Include keywords: {', '.join(self.settings.include_keywords) or 'none'}\n"
             f"Exclude keywords: {', '.join(self.settings.exclude_keywords) or 'none'}"
         )
+
+    def _connect(self) -> str:
+        if not self.oauth_start_url:
+            return "hh.ru OAuth is not configured yet. Set HH_CLIENT_ID, HH_CLIENT_SECRET, and HH_REDIRECT_URI."
+        separator = "&" if "?" in self.oauth_start_url else "?"
+        return f"Connect hh.ru: {self.oauth_start_url}{separator}state={self.oauth_state}"
 
     def _status(self) -> str:
         audit_count = len(self.store.list_audit_entries())

@@ -61,6 +61,7 @@ python -m hh_bot.app
 Supported commands:
 
 - `/start`
+- `/connect`
 - `/status`
 - `/settings`
 - `/search`
@@ -68,4 +69,34 @@ Supported commands:
 - `/reject <vacancy_id>`
 - `/stop`
 
-In this version `/search` uses an in-memory dry-run vacancy source. Real hh.ru search and OAuth will come in the next integration slice.
+In this version `/search` uses an in-memory dry-run vacancy source. hh.ru OAuth skeleton is present; real hh.ru vacancy search will come in the next integration slice.
+
+## Run hh.ru OAuth Callback Server
+
+Register an app at hh.ru/dev first and put values into `.env`:
+
+```powershell
+HH_CLIENT_ID=your-client-id
+HH_CLIENT_SECRET=your-client-secret
+HH_REDIRECT_URI=http://localhost:8000/oauth/hh/callback
+HH_USER_AGENT=HHBot/0.1 (you@example.com)
+OAUTH_START_URL=http://localhost:8000/oauth/hh/start
+OAUTH_STATE=local-telegram-user
+```
+
+Run the local callback server:
+
+```powershell
+$env:RUN_OAUTH_SERVER='1'
+python -m hh_bot.app
+```
+
+Then use `/connect` in Telegram. The bot returns a link like:
+
+```text
+http://localhost:8000/oauth/hh/start?state=local-telegram-user
+```
+
+That route redirects to hh.ru OAuth. After login and consent, hh.ru redirects back to `/oauth/hh/callback`, the app exchanges `code` for `access_token`/`refresh_token`, and saves the token pair in local SQLite.
+
+Development storage note: OAuth tokens are currently stored in local SQLite for the developer machine only. Do not commit `*.sqlite3`, do not log token values, and replace this with encrypted/managed secret storage before production deployment.

@@ -3,6 +3,8 @@ from __future__ import annotations
 from .bot_service import BotService
 from .config import Settings, load_settings
 from .models import UserSettings
+from .oauth import HhOAuthConfig
+from .oauth_web import create_oauth_app
 from .storage import SQLiteStore
 from .telegram_bot import run_polling_sync
 
@@ -17,11 +19,36 @@ def build_service(settings: Settings) -> BotService:
         exclude_keywords=settings.exclude_keywords,
         min_score=settings.default_min_score,
     )
-    return BotService(store=store, settings=user_settings)
+    return BotService(
+        store=store,
+        settings=user_settings,
+        oauth_start_url=settings.oauth_start_url,
+        oauth_state=settings.oauth_state,
+    )
+
+
+def build_oauth_app(settings: Settings):
+    store = SQLiteStore(settings.database_path)
+    store.initialize()
+    return create_oauth_app(
+        store=store,
+        oauth_config=HhOAuthConfig(
+            client_id=settings.hh_client_id,
+            client_secret=settings.hh_client_secret,
+            redirect_uri=settings.hh_redirect_uri,
+            user_agent=settings.hh_user_agent,
+        ),
+    )
 
 
 def main() -> None:
     settings = load_settings()
+    if settings.run_oauth_server:
+        import uvicorn
+
+        uvicorn.run(build_oauth_app(settings), host="0.0.0.0", port=8000)
+        return
+
     service = build_service(settings)
     if settings.run_telegram_polling:
         run_polling_sync(service, settings.telegram_bot_token)
