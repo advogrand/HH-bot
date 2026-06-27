@@ -8,7 +8,7 @@ from hh_bot.hh_resumes import HhResumeError
 from hh_bot.hh_vacancies import HhVacancySearchError
 from hh_bot.models import Resume, UserSettings, Vacancy
 from hh_bot.storage import SQLiteStore
-from hh_bot.telegram_bot import TelegramCommandAdapter, ensure_bot_token
+from hh_bot.telegram_bot import TelegramCommandAdapter, ensure_bot_token, split_telegram_text
 
 
 class FakeMessage:
@@ -176,7 +176,31 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertTrue(browser_runner.was_called)
             self.assertEqual(browser_runner.search_text, "python")
+            self.assertIn("Searching hh.ru in browser", message.answers[0])
             self.assertIn("Python Developer", message.answers[-1])
+
+    async def test_adapter_splits_long_browser_search_response(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("designer",),
+                    min_score=55,
+                ),
+                search_text="designer",
+            )
+            browser_runner = ManyVacanciesBrowserRunner()
+            adapter = TelegramCommandAdapter(service, browser_runner=browser_runner)
+            message = FakeMessage("/browser_search")
+
+            await adapter.handle_message(message)
+
+            self.assertGreater(len(message.answers), 2)
+            self.assertTrue(all(len(answer) <= 3900 for answer in message.answers))
 
     async def test_adapter_uses_apply_runner_for_approve(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -250,6 +274,14 @@ class TelegramConfigTests(unittest.TestCase):
     def test_ensure_bot_token_returns_token(self):
         self.assertEqual(ensure_bot_token("123:abc"), "123:abc")
 
+    def test_split_telegram_text_keeps_chunks_under_limit(self):
+        text = "\n\n---\n\n".join(f"Vacancy {index}\n" + ("x" * 700) for index in range(10))
+
+        chunks = split_telegram_text(text, limit=1200)
+
+        self.assertGreater(len(chunks), 1)
+        self.assertTrue(all(len(chunk) <= 1200 for chunk in chunks))
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -299,6 +331,24 @@ class FakeBrowserRunner:
                 description="Python backend",
                 relations=("browser_apply_available",),
             )
+        ]
+
+
+class ManyVacanciesBrowserRunner:
+    def __init__(self) -> None:
+        self.search_text = ""
+
+    async def fetch_vacancies(self) -> list[Vacancy]:
+        return [
+            Vacancy(
+                id=str(index),
+                name=f"Designer {index}",
+                employer_name="Acme",
+                url=f"https://hh.ru/vacancy/{index}",
+                description="designer " + ("long text " * 80),
+                relations=("browser_apply_available",),
+            )
+            for index in range(80)
         ]
 
 

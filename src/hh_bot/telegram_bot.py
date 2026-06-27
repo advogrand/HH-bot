@@ -10,6 +10,9 @@ from .hh_vacancies import HhVacancySearchError
 from .scoring import evaluate_vacancy
 
 
+TELEGRAM_MESSAGE_LIMIT = 3900
+
+
 class TelegramCommandAdapter:
     def __init__(
         self,
@@ -36,43 +39,44 @@ class TelegramCommandAdapter:
             try:
                 vacancies = await self.search_runner.fetch_vacancies()
             except HhVacancySearchError as exc:
-                await message.answer(str(exc))
+                await answer_text(message, str(exc))
                 return
             if not vacancies:
-                await message.answer("No vacancies found. Check /settings and try another /set_search query.")
+                await answer_text(message, "No vacancies found. Check /settings and try another /set_search query.")
                 return
             self.service.vacancies = vacancies
         if command == "/resumes" and self.resume_runner is not None:
             try:
                 resumes = await self.resume_runner.fetch_resumes()
             except HhResumeError as exc:
-                await message.answer(f"{exc} Current resume: {self.service.settings.resume_id}")
+                await answer_text(message, f"{exc} Current resume: {self.service.settings.resume_id}")
                 return
             if not resumes:
-                await message.answer("Connect hh.ru first with /connect, then run /resumes again.")
+                await answer_text(message, "Connect hh.ru first with /connect, then run /resumes again.")
                 return
             self.service.resumes = resumes
         if command == "/browser_search":
             if self.browser_runner is None:
-                await message.answer("Browser-assisted search is not configured.")
+                await answer_text(message, "Browser-assisted search is not configured.")
                 return
             if hasattr(self.browser_runner, "search_text"):
                 self.browser_runner.search_text = arg.strip() or self.service.search_text
+            await answer_text(message, "Searching hh.ru in browser. I will send candidates when the page is parsed.")
             try:
                 vacancies = await self.browser_runner.fetch_vacancies()
             except HhBrowserError as exc:
-                await message.answer(str(exc))
+                await answer_text(message, str(exc))
                 return
             if not vacancies:
-                await message.answer("No visible hh.ru vacancy cards found in browser.")
+                await answer_text(message, "No visible hh.ru vacancy cards found in browser.")
                 return
             self.service.vacancies = vacancies
-            await message.answer(self.service.handle_command("/search"))
+            await answer_text(message, self.service.handle_command("/search"))
             return
         if command == "/approve" and self.apply_runner is not None:
             vacancy = self.service._find_vacancy(arg.strip())
             if vacancy is None:
-                await message.answer(f"Vacancy {arg.strip() or '<empty>'} not found in current queue.")
+                await answer_text(message, f"Vacancy {arg.strip() or '<empty>'} not found in current queue.")
                 return
             already_applied = self.service.store.has_response(
                 self.service.settings.resume_id,
@@ -84,22 +88,23 @@ class TelegramCommandAdapter:
                 already_applied=already_applied,
             )
             if already_applied:
-                await message.answer(f"Vacancy {vacancy.id} already has a recorded response.")
+                await answer_text(message, f"Vacancy {vacancy.id} already has a recorded response.")
                 return
             result = await self.apply_runner.approve(
                 vacancy=vacancy,
                 settings=self.service.settings,
                 score=score,
             )
-            await message.answer(result.user_message)
+            await answer_text(message, result.user_message)
             return
         if command == "/auto_apply":
             if self.auto_apply_runner is None:
-                await message.answer("Auto apply is not configured.")
+                await answer_text(message, "Auto apply is not configured.")
                 return
             confirm = arg.strip().lower() == "confirm"
             if confirm:
-                await message.answer(
+                await answer_text(
+                    message,
                     "Auto apply started. I will send a summary when the batch finishes. "
                     "Use /stop if you need to halt future runs."
                 )
@@ -108,10 +113,10 @@ class TelegramCommandAdapter:
                 settings=self.service.settings,
                 confirm=confirm,
             )
-            await message.answer(summary.user_message)
+            await answer_text(message, summary.user_message)
             return
         response = self.service.handle_command(text)
-        await message.answer(response)
+        await answer_text(message, response)
 
 
 def ensure_bot_token(token: str) -> str:
@@ -235,3 +240,48 @@ class _message_with_text:
 
     async def answer(self, text: str) -> None:
         await self._message.answer(text)
+
+
+async def answer_text(message: Any, text: str) -> None:
+    for chunk in split_telegram_text(text):
+        await message.answer(chunk)
+
+
+def split_telegram_text(text: str, *, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:
+    if len(text) <= limit:
+        return [text]
+
+    chunks: list[str] = []
+    current = ""
+    parts, joiner = _split_preferred_parts(text)
+    for part in parts:
+        separator = joiner if current else ""
+        candidate = f"{current}{separator}{part}" if current else part
+        if len(candidate) <= limit:
+            current = candidate
+            continue
+        if current:
+            chunks.append(current)
+            current = ""
+        if len(part) <= limit:
+            current = part
+        else:
+            chunks.extend(_split_long_part(part, limit=limit))
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _split_preferred_parts(text: str) -> tuple[list[str], str]:
+    if "\n\n---\n\n" in text:
+        return text.split("\n\n---\n\n"), "\n\n---\n\n"
+    return text.splitlines(), "\n"
+
+
+def _split_long_part(text: str, *, limit: int) -> list[str]:
+    chunks: list[str] = []
+    remaining = text
+    while remaining:
+        chunks.append(remaining[:limit])
+        remaining = remaining[limit:]
+    return chunks
