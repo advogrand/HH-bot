@@ -110,6 +110,21 @@ class OAuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(fake_http.gets[0][1]["Authorization"], "Bearer access-1")
         self.assertEqual(fake_http.gets[0][1]["User-Agent"], "HHBot/0.1")
 
+    async def test_default_http_client_is_created_for_real_oauth_flow(self):
+        client = HhOAuthClient(
+            HhOAuthConfig(
+                client_id="client-1",
+                client_secret="secret-1",
+                redirect_uri="https://example.com/oauth/hh/callback",
+                user_agent="HHBot/0.1",
+            )
+        )
+
+        http_client = client._require_http_client()
+
+        self.assertIsNotNone(http_client)
+        await http_client.aclose()
+
 
 if __name__ == "__main__":
     unittest.main()

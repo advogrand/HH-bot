@@ -83,7 +83,9 @@ class HhOAuthClient:
 
     def _require_http_client(self) -> Any:
         if self._http_client is None:
-            raise RuntimeError("HTTP client is required for OAuth network calls")
+            import httpx
+
+            self._http_client = httpx.AsyncClient(timeout=20)
         return self._http_client
 
 
