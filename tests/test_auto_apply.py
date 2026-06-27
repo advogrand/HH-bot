@@ -222,6 +222,54 @@ class AutoApplyTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Stopped:", summary.user_message)
             self.assertEqual(apply_runner.applied_ids, ["1"])
 
+    async def test_auto_apply_continues_after_per_vacancy_browser_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            apply_runner = FakeApplyRunner(
+                results=[
+                    ApplyResult(
+                        ok=False,
+                        status="failed",
+                        error=HhApiError(
+                            status_code=0,
+                            type="test_required",
+                            value="test_required",
+                            user_message="Browser apply stopped: test_required.",
+                        ),
+                        user_message="Browser apply stopped: test_required.",
+                    ),
+                    ApplyResult(ok=True, status="sent", user_message="sent"),
+                ]
+            )
+            runner = AutoApplyRunner(
+                store=store,
+                apply_runner=apply_runner,
+                daily_limit=25,
+                delay_seconds=30,
+                sleep=FakeSleep(),
+            )
+            settings = UserSettings(
+                resume_id="resume-1",
+                cover_letter="Hello",
+                include_keywords=("Р Т‘Р С‘Р В·Р В°Р в„–Р Р…Р ВµРЎР‚",),
+                min_score=55,
+            )
+
+            summary = await runner.run(
+                vacancies=[
+                    _vacancy("1", "Digital Р Т‘Р С‘Р В·Р В°Р в„–Р Р…Р ВµРЎР‚ remote", "remote"),
+                    _vacancy("2", "Digital Р Т‘Р С‘Р В·Р В°Р в„–Р Р…Р ВµРЎР‚ remote 2", "remote"),
+                ],
+                settings=settings,
+                confirm=True,
+            )
+
+            self.assertEqual(summary.sent, 1)
+            self.assertEqual(summary.failed, 1)
+            self.assertNotIn("Stopped:", summary.user_message)
+            self.assertEqual(apply_runner.applied_ids, ["1", "2"])
+
 
 class FakeApplyRunner:
     def __init__(
@@ -229,13 +277,17 @@ class FakeApplyRunner:
         *,
         real_apply_enabled: bool = True,
         result: ApplyResult | None = None,
+        results: list[ApplyResult] | None = None,
     ) -> None:
         self.applied_ids = []
         self.real_apply_enabled = real_apply_enabled
         self.result = result
+        self.results = list(results or [])
 
     async def approve(self, *, vacancy, settings, score):
         self.applied_ids.append(vacancy.id)
+        if self.results:
+            return self.results.pop(0)
         if self.result is not None:
             return self.result
         return ApplyResult(ok=True, status="sent", user_message="sent")
