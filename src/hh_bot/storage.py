@@ -154,6 +154,24 @@ class SQLiteStore:
             conn.close()
         return [dict(row) for row in rows]
 
+    def count_responses_on_date(self, date_prefix: str) -> int:
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM audit_entries
+                WHERE created_at LIKE ?
+                  AND api_status IN ('sent', 'dry_run')
+                """,
+                (f"{date_prefix}%",),
+            ).fetchone()
+        finally:
+            conn.close()
+        if row is None:
+            return 0
+        return int(row["count"])
+
     def save_oauth_token(self, state: str, token: OAuthToken) -> None:
         conn = self._connect()
         try:

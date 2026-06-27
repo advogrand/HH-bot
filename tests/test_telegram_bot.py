@@ -208,6 +208,38 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(apply_runner.was_called)
             self.assertIn("Dry-run recorded", message.answers[0])
 
+    async def test_adapter_runs_auto_apply_with_confirmation(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("дизайнер",),
+                    min_score=55,
+                ),
+                vacancies=[
+                    Vacancy(
+                        id="vacancy-1",
+                        name="Digital Designer",
+                        employer_name="Acme",
+                        url="https://hh.ru/vacancy/1",
+                        description="Удаленная работа дизайнер",
+                    )
+                ],
+            )
+            auto_apply_runner = FakeAutoApplyRunner()
+            adapter = TelegramCommandAdapter(service, auto_apply_runner=auto_apply_runner)
+            message = FakeMessage("/auto_apply confirm")
+
+            await adapter.handle_message(message)
+
+            self.assertTrue(auto_apply_runner.was_called)
+            self.assertTrue(auto_apply_runner.confirm)
+            self.assertIn("Auto apply finished", message.answers[0])
+
 
 class TelegramConfigTests(unittest.TestCase):
     def test_ensure_bot_token_rejects_missing_token(self):
@@ -300,3 +332,14 @@ class FakeApplyRunner:
             status="dry_run",
             user_message=f"Dry-run recorded for vacancy {vacancy.id}. No real hh.ru response was sent.",
         )
+
+
+class FakeAutoApplyRunner:
+    def __init__(self) -> None:
+        self.was_called = False
+        self.confirm = False
+
+    async def run(self, *, vacancies, settings, confirm):
+        self.was_called = True
+        self.confirm = confirm
+        return type("Summary", (), {"user_message": "Auto apply finished"})()

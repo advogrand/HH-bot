@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .auto_apply import AutoApplyRunner
 from .bot_service import BotService
 from .config import Settings, load_settings
 from .hh_apply_runner import HhApplyRunner
@@ -94,6 +95,16 @@ def build_browser_runner(settings: Settings) -> HhBrowserRunner | None:
     )
 
 
+def build_auto_apply_runner(settings: Settings, store: SQLiteStore, apply_runner: HhApplyRunner) -> AutoApplyRunner:
+    return AutoApplyRunner(
+        store=store,
+        apply_runner=apply_runner,
+        daily_limit=settings.auto_apply_daily_limit,
+        delay_seconds=settings.auto_apply_delay_seconds,
+        remote_only=settings.auto_apply_remote_only,
+    )
+
+
 def main() -> None:
     settings = load_settings()
     if settings.run_oauth_server:
@@ -107,6 +118,7 @@ def main() -> None:
         search_runner = build_search_runner(settings, service.store)
         resume_runner = build_resume_runner(settings, service.store)
         apply_runner = build_apply_runner(settings, service.store)
+        auto_apply_runner = build_auto_apply_runner(settings, service.store, apply_runner)
         browser_runner = build_browser_runner(settings)
         run_polling_sync(
             service,
@@ -115,6 +127,7 @@ def main() -> None:
             resume_runner=resume_runner,
             apply_runner=apply_runner,
             browser_runner=browser_runner,
+            auto_apply_runner=auto_apply_runner,
         )
         return
 

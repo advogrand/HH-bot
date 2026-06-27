@@ -73,6 +73,7 @@ Supported commands:
 - `/search`
 - `/browser_search [search phrase]`
 - `/approve <vacancy_id>`
+- `/auto_apply confirm`
 - `/reject <vacancy_id>`
 - `/stop`
 
@@ -135,6 +136,27 @@ ENABLE_REAL_APPLY=1
 ```
 
 Keep it off until OAuth, resume selection, search quality, and cover letter text are manually verified.
+
+## Strict Auto Apply
+
+Auto apply is guarded by explicit confirmation, remote-only filtering, a daily limit, and a delay:
+
+```powershell
+AUTO_APPLY_DAILY_LIMIT=25
+AUTO_APPLY_DELAY_SECONDS=30
+AUTO_APPLY_REMOTE_ONLY=1
+ENABLE_REAL_APPLY=0
+```
+
+Flow:
+
+```text
+/browser_search digital дизайнер удаленно
+/auto_apply
+/auto_apply confirm
+```
+
+With `ENABLE_REAL_APPLY=0`, `/auto_apply confirm` records dry-run audit entries only. Set `ENABLE_REAL_APPLY=1` only after manually checking one full run. The runner skips non-remote vacancies, duplicates, low-score vacancies, and anything past the daily limit.
 
 ## Assisted Browser Search
 

@@ -34,6 +34,9 @@ class AppTests(unittest.TestCase):
                 browser_search_limit=10,
                 browser_headless=False,
                 browser_user_data_dir=".hh-browser-profile",
+                auto_apply_daily_limit=25,
+                auto_apply_delay_seconds=30,
+                auto_apply_remote_only=True,
             )
             SQLiteStore(settings.database_path).initialize()
             store = SQLiteStore(settings.database_path)

@@ -18,12 +18,14 @@ class TelegramCommandAdapter:
         resume_runner: Any | None = None,
         apply_runner: Any | None = None,
         browser_runner: Any | None = None,
+        auto_apply_runner: Any | None = None,
     ) -> None:
         self.service = service
         self.search_runner = search_runner
         self.resume_runner = resume_runner
         self.apply_runner = apply_runner
         self.browser_runner = browser_runner
+        self.auto_apply_runner = auto_apply_runner
 
     async def handle_message(self, message: Any) -> None:
         text = getattr(message, "text", None) or ""
@@ -91,6 +93,18 @@ class TelegramCommandAdapter:
             )
             await message.answer(result.user_message)
             return
+        if command == "/auto_apply":
+            if self.auto_apply_runner is None:
+                await message.answer("Auto apply is not configured.")
+                return
+            confirm = arg.strip().lower() == "confirm"
+            summary = await self.auto_apply_runner.run(
+                vacancies=self.service.vacancies,
+                settings=self.service.settings,
+                confirm=confirm,
+            )
+            await message.answer(summary.user_message)
+            return
         response = self.service.handle_command(text)
         await message.answer(response)
 
@@ -108,6 +122,7 @@ def create_dispatcher(
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
     browser_runner: Any | None = None,
+    auto_apply_runner: Any | None = None,
 ) -> Any:
     try:
         from aiogram import Dispatcher
@@ -123,6 +138,7 @@ def create_dispatcher(
         resume_runner=resume_runner,
         apply_runner=apply_runner,
         browser_runner=browser_runner,
+        auto_apply_runner=auto_apply_runner,
     )
     dispatcher = Dispatcher()
 
@@ -144,6 +160,7 @@ def create_dispatcher(
             "search",
             "browser_search",
             "approve",
+            "auto_apply",
             "reject",
             "stop",
         )
@@ -161,6 +178,7 @@ async def run_polling(
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
     browser_runner: Any | None = None,
+    auto_apply_runner: Any | None = None,
 ) -> None:
     try:
         from aiogram import Bot
@@ -176,6 +194,7 @@ async def run_polling(
         resume_runner=resume_runner,
         apply_runner=apply_runner,
         browser_runner=browser_runner,
+        auto_apply_runner=auto_apply_runner,
     )
     await dispatcher.start_polling(bot)
 
@@ -187,6 +206,7 @@ def run_polling_sync(
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
     browser_runner: Any | None = None,
+    auto_apply_runner: Any | None = None,
 ) -> None:
     asyncio.run(
         run_polling(
@@ -196,6 +216,7 @@ def run_polling_sync(
             resume_runner=resume_runner,
             apply_runner=apply_runner,
             browser_runner=browser_runner,
+            auto_apply_runner=auto_apply_runner,
         )
     )
 

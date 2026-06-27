@@ -101,6 +101,9 @@ class FakeCard:
         value = values.get(selector)
         return FakeListLocator([FakeValueLocator(value)] if value else [])
 
+    def inner_text(self):
+        return " ".join(str(value) for value in self.data.values() if value)
+
 
 class FakeValueLocator:
     def __init__(self, text, *, href=None):

@@ -31,6 +31,9 @@ class Settings:
     browser_search_limit: int
     browser_headless: bool
     browser_user_data_dir: str
+    auto_apply_daily_limit: int
+    auto_apply_delay_seconds: int
+    auto_apply_remote_only: bool
 
 
 def load_settings() -> Settings:
@@ -62,6 +65,9 @@ def load_settings() -> Settings:
         browser_search_limit=int(env.get("BROWSER_SEARCH_LIMIT", "10")),
         browser_headless=_bool_env(env, "BROWSER_HEADLESS"),
         browser_user_data_dir=env.get("BROWSER_USER_DATA_DIR", ".hh-browser-profile"),
+        auto_apply_daily_limit=int(env.get("AUTO_APPLY_DAILY_LIMIT", "25")),
+        auto_apply_delay_seconds=int(env.get("AUTO_APPLY_DELAY_SECONDS", "30")),
+        auto_apply_remote_only=_bool_env(env, "AUTO_APPLY_REMOTE_ONLY", default=True),
     )
 
 
@@ -93,8 +99,11 @@ def _strip_quotes(value: str) -> str:
     return value
 
 
-def _bool_env(env: Mapping[str, str], name: str) -> bool:
-    return env.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+def _bool_env(env: Mapping[str, str], name: str, *, default: bool = False) -> bool:
+    raw = env.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _csv_env(env: Mapping[str, str], name: str) -> tuple[str, ...]:

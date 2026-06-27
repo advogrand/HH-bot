@@ -102,6 +102,7 @@ def collect_vacancies_for_review(page, *, limit: int = 10) -> list[Vacancy]:
 
         requirement = _first_text(card, ['[data-qa="vacancy-serp__vacancy_snippet_requirement"]'])
         responsibility = _first_text(card, ['[data-qa="vacancy-serp__vacancy_snippet_responsibility"]'])
+        full_card_text = _safe_inner_text(card)
         relations = ()
         if card.locator('[data-qa="vacancy-serp__vacancy_response"]').count():
             relations = ("browser_apply_available",)
@@ -112,7 +113,9 @@ def collect_vacancies_for_review(page, *, limit: int = 10) -> list[Vacancy]:
                 name=title,
                 employer_name=_first_text(card, ['[data-qa="vacancy-serp__vacancy-employer-text"]']),
                 url=href or f"https://hh.ru/vacancy/{vacancy_id}",
-                description=" ".join(part for part in [requirement, responsibility] if part),
+                description=" ".join(
+                    part for part in [requirement, responsibility, full_card_text] if part
+                ),
                 area=_first_text(card, ['[data-qa="vacancy-serp__vacancy-address"]']) or None,
                 relations=relations,
             )
@@ -164,6 +167,13 @@ def _safe_attr(locator, name: str) -> str:
     if not locator.count():
         return ""
     return (locator.get_attribute(name) or "").strip()
+
+
+def _safe_inner_text(locator) -> str:
+    try:
+        return locator.inner_text().strip()
+    except Exception:
+        return ""
 
 
 def _vacancy_id_from_url(url: str) -> str:
