@@ -7,11 +7,14 @@ from hh_bot.models import UserSettings, Vacancy
 class BrowserApplyTests(unittest.TestCase):
     def test_browser_apply_success_returns_sent(self):
         page = FakePage(
-            text="Вакансия дизайнер",
+            text="\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u044f \u0434\u0438\u0437\u0430\u0439\u043d\u0435\u0440",
             selectors={
                 '[data-qa="vacancy-response-link-top"]': FakeLocator(visible=True),
                 '[data-qa="vacancy-response-popup-form-letter-input"]': FakeLocator(visible=True),
-                '[data-qa="vacancy-response-submit-popup"]': FakeLocator(visible=True, after_click_text="Отклик отправлен"),
+                '[data-qa="vacancy-response-submit-popup"]': FakeLocator(
+                    visible=True,
+                    after_click_text="\u041e\u0442\u043a\u043b\u0438\u043a \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d",
+                ),
             },
         )
 
@@ -21,8 +24,23 @@ class BrowserApplyTests(unittest.TestCase):
         self.assertEqual(result.status, "sent")
         self.assertEqual(page.selectors['[data-qa="vacancy-response-popup-form-letter-input"]'].filled, "Hello")
 
+    def test_browser_apply_requires_sent_confirmation(self):
+        page = FakePage(
+            text="\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u044f \u0434\u0438\u0437\u0430\u0439\u043d\u0435\u0440",
+            selectors={
+                '[data-qa="vacancy-response-link-top"]': FakeLocator(visible=True),
+                '[data-qa="vacancy-response-popup-form-letter-input"]': FakeLocator(visible=True),
+                '[data-qa="vacancy-response-submit-popup"]': FakeLocator(visible=True),
+            },
+        )
+
+        result = apply_visible_page(page, vacancy=_vacancy(), settings=UserSettings("resume-1", "Hello"))
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error.value, "confirmation_missing")
+
     def test_browser_apply_stops_on_captcha(self):
-        page = FakePage(text="Пожалуйста, пройдите captcha")
+        page = FakePage(text="\u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u043f\u0440\u043e\u0439\u0434\u0438\u0442\u0435 captcha")
 
         result = apply_visible_page(page, vacancy=_vacancy(), settings=UserSettings("resume-1", "Hello"))
 
@@ -31,11 +49,11 @@ class BrowserApplyTests(unittest.TestCase):
 
     def test_browser_apply_stops_on_questions(self):
         page = FakePage(
-            text="Вакансия дизайнер",
+            text="\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u044f \u0434\u0438\u0437\u0430\u0439\u043d\u0435\u0440",
             selectors={
                 '[data-qa="vacancy-response-link-top"]': FakeLocator(
                     visible=True,
-                    after_click_text="Работодатель просит ответить на вопросы",
+                    after_click_text="\u0420\u0430\u0431\u043e\u0442\u043e\u0434\u0430\u0442\u0435\u043b\u044c \u043f\u0440\u043e\u0441\u0438\u0442 \u043e\u0442\u0432\u0435\u0442\u0438\u0442\u044c \u043d\u0430 \u0432\u043e\u043f\u0440\u043e\u0441\u044b",
                 ),
             },
         )
@@ -46,7 +64,7 @@ class BrowserApplyTests(unittest.TestCase):
         self.assertEqual(result.error.value, "questions_required")
 
     def test_browser_apply_stops_when_response_button_missing(self):
-        page = FakePage(text="Вакансия дизайнер")
+        page = FakePage(text="\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u044f \u0434\u0438\u0437\u0430\u0439\u043d\u0435\u0440")
 
         result = apply_visible_page(page, vacancy=_vacancy(), settings=UserSettings("resume-1", "Hello"))
 
