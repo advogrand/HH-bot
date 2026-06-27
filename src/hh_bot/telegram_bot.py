@@ -21,6 +21,7 @@ class TelegramCommandAdapter:
         resume_runner: Any | None = None,
         apply_runner: Any | None = None,
         browser_runner: Any | None = None,
+        browser_login_runner: Any | None = None,
         auto_apply_runner: Any | None = None,
     ) -> None:
         self.service = service
@@ -28,6 +29,7 @@ class TelegramCommandAdapter:
         self.resume_runner = resume_runner
         self.apply_runner = apply_runner
         self.browser_runner = browser_runner
+        self.browser_login_runner = browser_login_runner
         self.auto_apply_runner = auto_apply_runner
 
     async def handle_message(self, message: Any) -> None:
@@ -72,6 +74,17 @@ class TelegramCommandAdapter:
                 return
             self.service.vacancies = vacancies
             await answer_text(message, self.service.handle_command("/search"))
+            return
+        if command == "/browser_login":
+            if self.browser_login_runner is None:
+                await answer_text(message, "Browser login is not configured.")
+                return
+            await answer_text(
+                message,
+                "Opening the bot browser profile. Log in to hh.ru in that window; I will wait up to 5 minutes.",
+            )
+            result = await self.browser_login_runner.open_login()
+            await answer_text(message, result)
             return
         if command == "/approve" and self.apply_runner is not None:
             vacancy = self.service._find_vacancy(arg.strip())
@@ -132,6 +145,7 @@ def create_dispatcher(
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
     browser_runner: Any | None = None,
+    browser_login_runner: Any | None = None,
     auto_apply_runner: Any | None = None,
 ) -> Any:
     try:
@@ -148,6 +162,7 @@ def create_dispatcher(
         resume_runner=resume_runner,
         apply_runner=apply_runner,
         browser_runner=browser_runner,
+        browser_login_runner=browser_login_runner,
         auto_apply_runner=auto_apply_runner,
     )
     dispatcher = Dispatcher()
@@ -171,6 +186,7 @@ def create_dispatcher(
             "set_include",
             "set_exclude",
             "search",
+            "browser_login",
             "browser_search",
             "approve",
             "auto_apply",
@@ -191,6 +207,7 @@ async def run_polling(
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
     browser_runner: Any | None = None,
+    browser_login_runner: Any | None = None,
     auto_apply_runner: Any | None = None,
 ) -> None:
     try:
@@ -207,6 +224,7 @@ async def run_polling(
         resume_runner=resume_runner,
         apply_runner=apply_runner,
         browser_runner=browser_runner,
+        browser_login_runner=browser_login_runner,
         auto_apply_runner=auto_apply_runner,
     )
     await dispatcher.start_polling(bot)
@@ -219,6 +237,7 @@ def run_polling_sync(
     resume_runner: Any | None = None,
     apply_runner: Any | None = None,
     browser_runner: Any | None = None,
+    browser_login_runner: Any | None = None,
     auto_apply_runner: Any | None = None,
 ) -> None:
     asyncio.run(
@@ -229,6 +248,7 @@ def run_polling_sync(
             resume_runner=resume_runner,
             apply_runner=apply_runner,
             browser_runner=browser_runner,
+            browser_login_runner=browser_login_runner,
             auto_apply_runner=auto_apply_runner,
         )
     )

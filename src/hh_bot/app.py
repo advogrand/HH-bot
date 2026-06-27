@@ -6,6 +6,7 @@ from .config import Settings, load_settings
 from .hh_apply_runner import HhApplyRunner
 from .hh_browser_apply import HhBrowserApplyConfig, HhBrowserApplyRunner
 from .hh_browser import HhBrowserConfig, HhBrowserRunner
+from .hh_browser_login import HhBrowserLoginConfig, HhBrowserLoginRunner
 from .hh_resume_runner import HhResumeRunner
 from .models import UserSettings
 from .hh_search_runner import HhSearchRunner
@@ -106,6 +107,15 @@ def build_browser_runner(settings: Settings) -> HhBrowserRunner | None:
     )
 
 
+def build_browser_login_runner(settings: Settings) -> HhBrowserLoginRunner:
+    return HhBrowserLoginRunner(
+        HhBrowserLoginConfig(
+            user_data_dir=settings.browser_user_data_dir,
+            headless=settings.browser_headless,
+        )
+    )
+
+
 def build_auto_apply_runner(settings: Settings, store: SQLiteStore, apply_runner: HhApplyRunner) -> AutoApplyRunner:
     return AutoApplyRunner(
         store=store,
@@ -132,6 +142,7 @@ def main() -> None:
         apply_runner = build_apply_runner(settings, service.store)
         auto_apply_runner = build_auto_apply_runner(settings, service.store, apply_runner)
         browser_runner = build_browser_runner(settings)
+        browser_login_runner = build_browser_login_runner(settings)
         run_polling_sync(
             service,
             settings.telegram_bot_token,
@@ -139,6 +150,7 @@ def main() -> None:
             resume_runner=resume_runner,
             apply_runner=apply_runner,
             browser_runner=browser_runner,
+            browser_login_runner=browser_login_runner,
             auto_apply_runner=auto_apply_runner,
         )
         return

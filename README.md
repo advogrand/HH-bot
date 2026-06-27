@@ -74,6 +74,7 @@ Supported commands:
 - `/set_include <comma-separated keywords>`
 - `/set_exclude <comma-separated keywords>`
 - `/search`
+- `/browser_login`
 - `/browser_search [search phrase]`
 - `/approve <vacancy_id>`
 - `/auto_apply confirm`
@@ -177,6 +178,7 @@ BROWSER_USER_DATA_DIR=.hh-browser-profile
 Then use:
 
 ```text
+/browser_login
 /browser_search python backend
 ```
 
@@ -196,6 +198,7 @@ BROWSER_USER_DATA_DIR=.hh-browser-profile
 Flow:
 
 ```text
+/browser_login
 /browser_search графический дизайнер удаленно
 /auto_apply
 /auto_apply confirm

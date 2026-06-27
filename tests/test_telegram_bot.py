@@ -179,6 +179,21 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Searching hh.ru in browser", message.answers[0])
             self.assertIn("Python Developer", message.answers[-1])
 
+    async def test_adapter_opens_browser_login(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(store=store, settings=UserSettings("resume-1", "Hello"))
+            browser_login_runner = FakeBrowserLoginRunner()
+            adapter = TelegramCommandAdapter(service, browser_login_runner=browser_login_runner)
+            message = FakeMessage("/browser_login")
+
+            await adapter.handle_message(message)
+
+            self.assertTrue(browser_login_runner.was_called)
+            self.assertIn("Opening the bot browser profile", message.answers[0])
+            self.assertIn("logged in", message.answers[1])
+
     async def test_adapter_splits_long_browser_search_response(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
@@ -350,6 +365,15 @@ class ManyVacanciesBrowserRunner:
             )
             for index in range(80)
         ]
+
+
+class FakeBrowserLoginRunner:
+    def __init__(self) -> None:
+        self.was_called = False
+
+    async def open_login(self) -> str:
+        self.was_called = True
+        return "hh.ru browser profile is logged in."
 
 
 class FakeResumeRunner:

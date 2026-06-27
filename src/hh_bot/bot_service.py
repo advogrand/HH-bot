@@ -70,7 +70,7 @@ class BotService:
         return (
             "Unknown command. Use /start, /connect, /resumes, /use_resume, /status, "
             "/settings, /audit, /set_search, /set_score, /set_resume, /set_letter, "
-            "/set_include, /set_exclude, /search, /approve, /reject, or /stop."
+            "/set_include, /set_exclude, /search, /browser_login, /approve, /reject, or /stop."
         )
 
     def _start(self) -> str:
