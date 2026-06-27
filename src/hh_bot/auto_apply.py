@@ -40,6 +40,7 @@ class AutoApplyRunner:
         daily_limit: int = 25,
         delay_seconds: int = 30,
         remote_only: bool = True,
+        transport_label: str = "api",
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self.store = store
@@ -47,6 +48,7 @@ class AutoApplyRunner:
         self.daily_limit = daily_limit
         self.delay_seconds = delay_seconds
         self.remote_only = remote_only
+        self.transport_label = transport_label
         self.sleep = sleep
 
     async def run(
@@ -69,7 +71,7 @@ class AutoApplyRunner:
             return AutoApplySummary(
                 user_message=(
                     "Auto apply preview only. Use /auto_apply confirm to start. "
-                    f"Mode: {mode}. "
+                    f"Mode: {mode}, transport: {self.transport_label}. "
                     f"Rules: remote_only={self.remote_only}, delay={self.delay_seconds}s, "
                     f"daily_limit={self.daily_limit}."
                 )
@@ -161,17 +163,29 @@ def _is_fatal_apply_error(result) -> bool:
         return False
     return error.value in {
         "bad_authorization",
+        "access_restricted",
+        "browser_error",
         "captcha_required",
         "forbidden",
         "limit_exceeded",
+        "not_logged_in",
+        "questions_required",
+        "response_unavailable",
+        "test_required",
         "network_error",
         "token_expired",
         "token_revoked",
     } or error.type in {
         "bad_authorization",
+        "access_restricted",
+        "browser_error",
         "captcha_required",
         "forbidden",
         "limit_exceeded",
+        "not_logged_in",
+        "questions_required",
+        "response_unavailable",
+        "test_required",
         "network_error",
         "token_expired",
         "token_revoked",

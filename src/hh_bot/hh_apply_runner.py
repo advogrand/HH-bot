@@ -15,12 +15,16 @@ class HhApplyRunner:
         oauth_state: str,
         user_agent: str,
         real_apply_enabled: bool,
+        apply_transport: str = "api",
+        browser_apply_runner=None,
         apply_client_factory: Callable[..., HhApplyClient] = HhApplyClient,
     ) -> None:
         self.store = store
         self.oauth_state = oauth_state
         self.user_agent = user_agent
         self.real_apply_enabled = real_apply_enabled
+        self.apply_transport = apply_transport
+        self.browser_apply_runner = browser_apply_runner
         self.apply_client_factory = apply_client_factory
 
     async def approve(
@@ -43,6 +47,17 @@ class HhApplyRunner:
                 user_message=f"Dry-run recorded for vacancy {vacancy.id}. No real hh.ru response was sent.",
             )
 
+        if self.apply_transport == "browser":
+            if self.browser_apply_runner is None:
+                return ApplyResult(
+                    ok=False,
+                    status="failed",
+                    user_message="Browser apply transport is enabled but not configured.",
+                )
+            result = await self.browser_apply_runner.apply(vacancy=vacancy, settings=settings)
+            self._record_result(vacancy=vacancy, settings=settings, score=score, result=result)
+            return result
+
         token = self.store.get_oauth_token(self.oauth_state)
         if token is None:
             return ApplyResult(
@@ -62,6 +77,17 @@ class HhApplyRunner:
                 message=settings.cover_letter,
             )
         )
+        self._record_result(vacancy=vacancy, settings=settings, score=score, result=result)
+        return result
+
+    def _record_result(
+        self,
+        *,
+        vacancy: Vacancy,
+        settings: UserSettings,
+        score: ScoreResult,
+        result: ApplyResult,
+    ) -> None:
         self._record(
             vacancy=vacancy,
             settings=settings,
@@ -70,7 +96,6 @@ class HhApplyRunner:
             api_error_type=result.error.type if result.error else None,
             api_error_value=result.error.value if result.error else None,
         )
-        return result
 
     def _record(
         self,

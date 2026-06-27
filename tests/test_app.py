@@ -30,6 +30,7 @@ class AppTests(unittest.TestCase):
                 hh_search_area="1",
                 hh_search_per_page=10,
                 enable_real_apply=False,
+                hh_apply_transport="api",
                 enable_browser_search=False,
                 browser_search_limit=10,
                 browser_headless=False,

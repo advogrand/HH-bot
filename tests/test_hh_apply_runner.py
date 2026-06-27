@@ -104,6 +104,43 @@ class HhApplyRunnerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result.status, "not_connected")
             self.assertFalse(store.has_response("resume-1", "vacancy-1"))
 
+    async def test_browser_transport_uses_browser_runner_and_records_sent(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            browser_runner = FakeBrowserApplyRunner(
+                ApplyResult(ok=True, status="sent", user_message="browser sent")
+            )
+            runner = HhApplyRunner(
+                store=store,
+                oauth_state="telegram-user-1",
+                user_agent="HHBot/0.1",
+                real_apply_enabled=True,
+                apply_transport="browser",
+                browser_apply_runner=browser_runner,
+            )
+
+            result = await runner.approve(
+                vacancy=_vacancy(),
+                settings=UserSettings("resume-1", "Hello"),
+                score=ScoreResult(True, 90, "matched keywords: python"),
+            )
+
+            self.assertEqual(result.status, "sent")
+            self.assertEqual(browser_runner.calls, [("vacancy-1", "resume-1")])
+            self.assertTrue(store.has_response("resume-1", "vacancy-1"))
+            self.assertEqual(store.list_audit_entries()[0]["api_status"], "sent")
+
+
+class FakeBrowserApplyRunner:
+    def __init__(self, result: ApplyResult) -> None:
+        self.result = result
+        self.calls: list[tuple[str, str]] = []
+
+    async def apply(self, *, vacancy, settings):
+        self.calls.append((vacancy.id, settings.resume_id))
+        return self.result
+
 
 def _vacancy() -> Vacancy:
     return Vacancy(

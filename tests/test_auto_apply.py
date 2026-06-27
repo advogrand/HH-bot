@@ -76,6 +76,7 @@ class AutoApplyTests(unittest.IsolatedAsyncioTestCase):
                 apply_runner=apply_runner,
                 daily_limit=25,
                 delay_seconds=30,
+                transport_label="browser",
                 sleep=FakeSleep(),
             )
 
@@ -87,6 +88,7 @@ class AutoApplyTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(summary.sent, 0)
             self.assertIn("Use /auto_apply confirm", summary.user_message)
+            self.assertIn("transport: browser", summary.user_message)
             self.assertEqual(apply_runner.applied_ids, [])
 
     async def test_auto_apply_explains_empty_queue(self):

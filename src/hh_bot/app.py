@@ -4,6 +4,7 @@ from .auto_apply import AutoApplyRunner
 from .bot_service import BotService
 from .config import Settings, load_settings
 from .hh_apply_runner import HhApplyRunner
+from .hh_browser_apply import HhBrowserApplyConfig, HhBrowserApplyRunner
 from .hh_browser import HhBrowserConfig, HhBrowserRunner
 from .hh_resume_runner import HhResumeRunner
 from .models import UserSettings
@@ -75,11 +76,19 @@ def build_resume_runner(settings: Settings, store: SQLiteStore) -> HhResumeRunne
 
 
 def build_apply_runner(settings: Settings, store: SQLiteStore) -> HhApplyRunner:
+    browser_apply_runner = HhBrowserApplyRunner(
+        HhBrowserApplyConfig(
+            user_data_dir=settings.browser_user_data_dir,
+            headless=settings.browser_headless,
+        )
+    )
     return HhApplyRunner(
         store=store,
         oauth_state=settings.oauth_state,
         user_agent=settings.hh_user_agent,
         real_apply_enabled=settings.enable_real_apply,
+        apply_transport=settings.hh_apply_transport,
+        browser_apply_runner=browser_apply_runner,
     )
 
 
@@ -104,6 +113,7 @@ def build_auto_apply_runner(settings: Settings, store: SQLiteStore, apply_runner
         daily_limit=settings.auto_apply_daily_limit,
         delay_seconds=settings.auto_apply_delay_seconds,
         remote_only=settings.auto_apply_remote_only,
+        transport_label=settings.hh_apply_transport,
     )
 
 

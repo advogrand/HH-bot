@@ -136,6 +136,7 @@ With this default, `/approve <vacancy_id>` writes an audit entry and does not ca
 
 ```powershell
 ENABLE_REAL_APPLY=1
+HH_APPLY_TRANSPORT=api
 ```
 
 Keep it off until OAuth, resume selection, search quality, and cover letter text are manually verified.
@@ -149,6 +150,7 @@ AUTO_APPLY_DAILY_LIMIT=25
 AUTO_APPLY_DELAY_SECONDS=30
 AUTO_APPLY_REMOTE_ONLY=1
 ENABLE_REAL_APPLY=0
+HH_APPLY_TRANSPORT=api
 ```
 
 Flow:
@@ -159,7 +161,7 @@ Flow:
 /auto_apply confirm
 ```
 
-With `ENABLE_REAL_APPLY=0`, `/auto_apply confirm` records dry-run audit entries only. Set `ENABLE_REAL_APPLY=1` only after manually checking one full run. The runner skips non-remote vacancies, duplicates, low-score vacancies, and anything past the daily limit.
+With `ENABLE_REAL_APPLY=0`, `/auto_apply confirm` records dry-run audit entries only. Set `ENABLE_REAL_APPLY=1` only after manually checking one full run. Use `HH_APPLY_TRANSPORT=browser` when the official API denies applicant responses. The runner skips non-remote vacancies, duplicates, low-score vacancies, and anything past the daily limit.
 
 ## Assisted Browser Search
 
@@ -179,6 +181,27 @@ Then use:
 ```
 
 The bot opens a visible Chromium profile, navigates to hh.ru search, reads visible vacancy cards, scores them, and shows matches in Telegram. The user must log in, solve SMS/captcha, and handle any hh.ru restrictions manually. This mode must not use stealth, captcha bypass, hidden headless actions, or mass automatic responses.
+
+## Assisted Browser Apply
+
+When official hh.ru apply API returns `forbidden`, use visible browser-assisted apply:
+
+```powershell
+ENABLE_REAL_APPLY=1
+HH_APPLY_TRANSPORT=browser
+BROWSER_HEADLESS=0
+BROWSER_USER_DATA_DIR=.hh-browser-profile
+```
+
+Flow:
+
+```text
+/browser_search графический дизайнер удаленно
+/auto_apply
+/auto_apply confirm
+```
+
+The bot opens each queued vacancy in the visible browser profile and tries only the standard hh.ru response controls. It stops on login pages, captcha, tests, employer questions, missing response controls, access restrictions, or other abnormal states. The user must resolve those states manually.
 
 ## Select Resume
 
