@@ -4,6 +4,7 @@ from pathlib import Path
 
 from hh_bot.bot_service import BotService
 from hh_bot.hh_apply import ApplyResult
+from hh_bot.hh_resumes import HhResumeError
 from hh_bot.hh_vacancies import HhVacancySearchError
 from hh_bot.models import Resume, UserSettings, Vacancy
 from hh_bot.storage import SQLiteStore
@@ -141,6 +142,19 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Python Developer", message.answers[0])
             self.assertIn("/use_resume resume-1", message.answers[0])
 
+    async def test_adapter_explains_hh_resume_api_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(store=store, settings=UserSettings("resume-direct", "Hello"))
+            adapter = TelegramCommandAdapter(service, resume_runner=ErrorResumeRunner())
+            message = FakeMessage("/resumes")
+
+            await adapter.handle_message(message)
+
+            self.assertIn("hh.ru denied resume list access", message.answers[0])
+            self.assertIn("resume-direct", message.answers[0])
+
     async def test_adapter_fetches_browser_vacancies_before_browser_search(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
@@ -268,6 +282,11 @@ class FakeResumeRunner:
                 url="https://api.hh.ru/resumes/resume-1",
             )
         ]
+
+
+class ErrorResumeRunner:
+    async def fetch_resumes(self) -> list[Resume]:
+        raise HhResumeError("hh.ru denied resume list access.")
 
 
 class FakeApplyRunner:

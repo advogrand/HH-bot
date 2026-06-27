@@ -5,6 +5,10 @@ from typing import Any
 from .models import Resume
 
 
+class HhResumeError(Exception):
+    pass
+
+
 class HhResumeClient:
     def __init__(
         self,
@@ -36,8 +40,9 @@ class HhResumeClient:
                 "User-Agent": self.user_agent,
             },
         )
-        response.raise_for_status()
         payload = response.json()
+        if response.status_code >= 400:
+            raise HhResumeError(_resume_error_message(response.status_code, payload))
         items = payload.get("items", [])
         if not isinstance(items, list):
             return []
@@ -50,3 +55,15 @@ def map_resume(raw: dict[str, Any]) -> Resume:
         title=str(raw.get("title") or raw.get("name") or ""),
         url=str(raw.get("url") or ""),
     )
+
+
+def _resume_error_message(status_code: int, payload: dict[str, Any]) -> str:
+    errors = payload.get("errors")
+    first = errors[0] if isinstance(errors, list) and errors else {}
+    error_type = str(first.get("type") or "unknown")
+    value = str(first.get("value") or error_type)
+    if status_code == 403 or error_type == "forbidden":
+        return "hh.ru denied resume list access. Use /set_resume with a direct resume id."
+    if value == "bad_user_agent":
+        return "hh.ru rejected User-Agent. Update HH_USER_AGENT and retry."
+    return f"hh.ru resume API error: {error_type}/{value} ({status_code})."

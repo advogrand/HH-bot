@@ -5,6 +5,7 @@ from typing import Any
 
 from .bot_service import BotService
 from .hh_browser import HhBrowserError
+from .hh_resumes import HhResumeError
 from .hh_vacancies import HhVacancySearchError
 from .scoring import evaluate_vacancy
 
@@ -40,7 +41,11 @@ class TelegramCommandAdapter:
                 return
             self.service.vacancies = vacancies
         if command == "/resumes" and self.resume_runner is not None:
-            resumes = await self.resume_runner.fetch_resumes()
+            try:
+                resumes = await self.resume_runner.fetch_resumes()
+            except HhResumeError as exc:
+                await message.answer(f"{exc} Current resume: {self.service.settings.resume_id}")
+                return
             if not resumes:
                 await message.answer("Connect hh.ru first with /connect, then run /resumes again.")
                 return
