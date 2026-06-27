@@ -40,7 +40,6 @@ def run_browser_apply(
     config: HhBrowserApplyConfig,
 ) -> ApplyResult:
     try:
-        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
         raise HhBrowserApplyError("Playwright is not installed. Run `python -m pip install -e .`.") from exc
@@ -57,8 +56,12 @@ def run_browser_apply(
             page = context.pages[0] if context.pages else context.new_page()
             try:
                 page.goto(vacancy.url, wait_until="domcontentloaded", timeout=config.timeout_ms)
-            except PlaywrightTimeoutError:
-                return _failed("browser_error", "timeout", "hh.ru page load timed out.")
+            except Exception as exc:
+                return _failed(
+                    "browser_error",
+                    exc.__class__.__name__,
+                    f"hh.ru page load failed: {exc.__class__.__name__}.",
+                )
             return apply_visible_page(page, vacancy=vacancy, settings=settings)
         finally:
             context.close()

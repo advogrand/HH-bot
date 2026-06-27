@@ -1,6 +1,8 @@
+import tempfile
 import unittest
+from pathlib import Path
 
-from hh_bot.hh_browser_apply import apply_visible_page
+from hh_bot.hh_browser_apply import HhBrowserApplyConfig, apply_visible_page, run_browser_apply
 from hh_bot.models import UserSettings, Vacancy
 
 
@@ -74,6 +76,26 @@ class BrowserApplyTests(unittest.TestCase):
 
         self.assertFalse(result.ok)
         self.assertEqual(result.error.value, "response_unavailable")
+
+    def test_browser_apply_maps_navigation_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = run_browser_apply(
+                vacancy=Vacancy(
+                    id="bad",
+                    name="Bad",
+                    employer_name="Acme",
+                    url="http://10.255.255.1/vacancy/bad",
+                ),
+                settings=UserSettings("resume-1", "Hello"),
+                config=HhBrowserApplyConfig(
+                    user_data_dir=str(Path(temp_dir) / "profile"),
+                    headless=True,
+                    timeout_ms=1,
+                ),
+            )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error.type, "browser_error")
 
 
 class FakePage:
