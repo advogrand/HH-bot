@@ -162,6 +162,7 @@ def create_dispatcher(
             "resumes",
             "use_resume",
             "status",
+            "audit",
             "settings",
             "set_search",
             "set_score",

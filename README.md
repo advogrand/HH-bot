@@ -65,6 +65,7 @@ Supported commands:
 - `/resumes`
 - `/use_resume <resume_id>`
 - `/status`
+- `/audit [limit]`
 - `/settings`
 - `/set_search <search phrase>`
 - `/set_score <0-100>`

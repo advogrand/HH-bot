@@ -19,6 +19,46 @@ class BotServiceTests(unittest.TestCase):
             self.assertIn("Mode: semi-automatic dry-run", message)
             self.assertIn("Audit entries: 0", message)
 
+    def test_audit_reports_recent_entries(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(
+                store=store,
+                settings=UserSettings(
+                    resume_id="resume-1",
+                    cover_letter="Hello",
+                    include_keywords=("python",),
+                ),
+                vacancies=[
+                    Vacancy(
+                        id="1",
+                        name="Python Developer",
+                        employer_name="Acme",
+                        url="https://hh.ru/vacancy/1",
+                        description="Python backend",
+                    )
+                ],
+            )
+
+            service.handle_command("/approve 1")
+            message = service.handle_command("/audit")
+
+            self.assertIn("Last 1 audit entries", message)
+            self.assertIn("Python Developer", message)
+            self.assertIn("Status: dry_run", message)
+            self.assertIn("https://hh.ru/vacancy/1", message)
+
+    def test_audit_reports_empty_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(store=store, settings=UserSettings("resume-1", "Hello"))
+
+            message = service.handle_command("/audit")
+
+            self.assertIn("Audit is empty", message)
+
     def test_search_returns_candidate_message_for_matching_vacancy(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")

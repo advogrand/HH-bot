@@ -37,6 +37,8 @@ class BotService:
             return self._start()
         if name == "/status":
             return self._status()
+        if name == "/audit":
+            return self._audit(arg.strip())
         if name == "/search":
             return self._search()
         if name == "/approve":
@@ -67,7 +69,7 @@ class BotService:
             return self._set_exclude(arg.strip())
         return (
             "Unknown command. Use /start, /connect, /resumes, /use_resume, /status, "
-            "/settings, /set_search, /set_score, /set_resume, /set_letter, "
+            "/settings, /audit, /set_search, /set_score, /set_resume, /set_letter, "
             "/set_include, /set_exclude, /search, /approve, /reject, or /stop."
         )
 
@@ -172,6 +174,29 @@ class BotService:
             f"Stopped: {stopped}"
         )
 
+    def _audit(self, raw_limit: str) -> str:
+        limit = _parse_limit(raw_limit, default=10, maximum=25)
+        entries = self.store.list_audit_entries()
+        if not entries:
+            return "Audit is empty. Run /approve or /auto_apply confirm first."
+
+        recent = entries[-limit:]
+        lines = [f"Last {len(recent)} audit entries:"]
+        for entry in reversed(recent):
+            lines.extend(
+                [
+                    "",
+                    f"- {entry['vacancy_title']}",
+                    f"  Company: {entry['employer_name']}",
+                    f"  Score: {entry['score']}/100",
+                    f"  Status: {entry['api_status']}",
+                    f"  Action: {entry['user_action']}",
+                    f"  Reason: {entry['reason']}",
+                    f"  URL: {entry['vacancy_url']}",
+                ]
+            )
+        return "\n".join(lines)
+
     def _search(self) -> str:
         if self.is_stopped:
             return "Search is stopped. Restart the process before searching again."
@@ -269,3 +294,13 @@ class BotService:
 
 def _parse_keywords(raw_keywords: str) -> tuple[str, ...]:
     return tuple(part.strip().lower() for part in raw_keywords.split(",") if part.strip())
+
+
+def _parse_limit(raw_limit: str, *, default: int, maximum: int) -> int:
+    if not raw_limit:
+        return default
+    try:
+        limit = int(raw_limit)
+    except ValueError:
+        return default
+    return max(1, min(limit, maximum))
