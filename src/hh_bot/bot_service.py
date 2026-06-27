@@ -192,9 +192,13 @@ class BotService:
                     f"  Status: {entry['api_status']}",
                     f"  Action: {entry['user_action']}",
                     f"  Reason: {entry['reason']}",
-                    f"  URL: {entry['vacancy_url']}",
                 ]
             )
+            if entry["api_error_type"] or entry["api_error_value"]:
+                lines.append(
+                    f"  Error: {entry['api_error_type'] or 'unknown'} / {entry['api_error_value'] or 'unknown'}"
+                )
+            lines.append(f"  URL: {entry['vacancy_url']}")
         return "\n".join(lines)
 
     def _search(self) -> str:

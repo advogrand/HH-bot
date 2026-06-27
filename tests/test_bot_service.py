@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from hh_bot.bot_service import BotService
-from hh_bot.models import Resume, UserSettings, Vacancy
+from hh_bot.models import AuditEntry, Resume, UserSettings, Vacancy
 from hh_bot.storage import SQLiteStore
 
 
@@ -48,6 +48,33 @@ class BotServiceTests(unittest.TestCase):
             self.assertIn("Python Developer", message)
             self.assertIn("Status: dry_run", message)
             self.assertIn("https://hh.ru/vacancy/1", message)
+
+    def test_audit_reports_error_details(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            store.record_audit(
+                AuditEntry(
+                    vacancy_id="1",
+                    vacancy_url="https://hh.ru/vacancy/1",
+                    vacancy_title="Designer",
+                    employer_name="Acme",
+                    resume_id="resume-1",
+                    score=64,
+                    reason="matched keywords: designer",
+                    cover_letter="Hello",
+                    user_action="approved",
+                    api_status="failed",
+                    api_error_type="test_required",
+                    api_error_value="test_required",
+                )
+            )
+            service = BotService(store=store, settings=UserSettings("resume-1", "Hello"))
+
+            message = service.handle_command("/audit")
+
+            self.assertIn("Status: failed", message)
+            self.assertIn("Error: test_required / test_required", message)
 
     def test_audit_reports_empty_state(self):
         with tempfile.TemporaryDirectory() as temp_dir:
