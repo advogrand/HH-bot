@@ -56,9 +56,11 @@ class AutoApplyRunner:
         confirm: bool,
     ) -> AutoApplySummary:
         if not confirm:
+            mode = "real" if self._real_apply_enabled() else "dry-run"
             return AutoApplySummary(
                 user_message=(
                     "Auto apply preview only. Use /auto_apply confirm to start. "
+                    f"Mode: {mode}. "
                     f"Rules: remote_only={self.remote_only}, delay={self.delay_seconds}s, "
                     f"daily_limit={self.daily_limit}."
                 )
@@ -83,7 +85,7 @@ class AutoApplyRunner:
                 skipped_limit += 1
                 continue
 
-            if sent > 0 and self.delay_seconds > 0:
+            if sent > 0 and self.delay_seconds > 0 and self._real_apply_enabled():
                 await self.sleep(self.delay_seconds)
             result = await self.apply_runner.approve(
                 vacancy=vacancy,
@@ -112,6 +114,9 @@ class AutoApplyRunner:
                 f"Skipped daily limit: {skipped_limit}"
             ),
         )
+
+    def _real_apply_enabled(self) -> bool:
+        return bool(getattr(self.apply_runner, "real_apply_enabled", True))
 
 
 def is_remote_vacancy(vacancy: Vacancy) -> bool:

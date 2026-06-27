@@ -88,10 +88,75 @@ class AutoApplyTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Use /auto_apply confirm", summary.user_message)
             self.assertEqual(apply_runner.applied_ids, [])
 
+    async def test_dry_run_auto_apply_does_not_sleep_between_items(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            apply_runner = FakeApplyRunner(real_apply_enabled=False)
+            sleep = FakeSleep()
+            runner = AutoApplyRunner(
+                store=store,
+                apply_runner=apply_runner,
+                daily_limit=25,
+                delay_seconds=30,
+                sleep=sleep,
+            )
+            settings = UserSettings(
+                resume_id="resume-1",
+                cover_letter="Hello",
+                include_keywords=("дизайнер",),
+                min_score=55,
+            )
+
+            summary = await runner.run(
+                vacancies=[
+                    _vacancy("1", "Digital дизайнер remote", "remote"),
+                    _vacancy("2", "Digital дизайнер remote 2", "удаленная работа"),
+                ],
+                settings=settings,
+                confirm=True,
+            )
+
+            self.assertEqual(summary.sent, 2)
+            self.assertEqual(sleep.calls, [])
+
+    async def test_real_auto_apply_sleeps_between_items(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            apply_runner = FakeApplyRunner(real_apply_enabled=True)
+            sleep = FakeSleep()
+            runner = AutoApplyRunner(
+                store=store,
+                apply_runner=apply_runner,
+                daily_limit=25,
+                delay_seconds=30,
+                sleep=sleep,
+            )
+            settings = UserSettings(
+                resume_id="resume-1",
+                cover_letter="Hello",
+                include_keywords=("дизайнер",),
+                min_score=55,
+            )
+
+            summary = await runner.run(
+                vacancies=[
+                    _vacancy("1", "Digital дизайнер remote", "remote"),
+                    _vacancy("2", "Digital дизайнер remote 2", "удаленная работа"),
+                ],
+                settings=settings,
+                confirm=True,
+            )
+
+            self.assertEqual(summary.sent, 2)
+            self.assertEqual(sleep.calls, [30])
+
 
 class FakeApplyRunner:
-    def __init__(self) -> None:
+    def __init__(self, *, real_apply_enabled: bool = True) -> None:
         self.applied_ids = []
+        self.real_apply_enabled = real_apply_enabled
 
     async def approve(self, *, vacancy, settings, score):
         self.applied_ids.append(vacancy.id)

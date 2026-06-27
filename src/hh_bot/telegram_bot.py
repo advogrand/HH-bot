@@ -98,6 +98,11 @@ class TelegramCommandAdapter:
                 await message.answer("Auto apply is not configured.")
                 return
             confirm = arg.strip().lower() == "confirm"
+            if confirm:
+                await message.answer(
+                    "Auto apply started. I will send a summary when the batch finishes. "
+                    "Use /stop if you need to halt future runs."
+                )
             summary = await self.auto_apply_runner.run(
                 vacancies=self.service.vacancies,
                 settings=self.service.settings,

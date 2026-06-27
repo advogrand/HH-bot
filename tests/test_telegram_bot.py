@@ -238,7 +238,8 @@ class TelegramBotTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertTrue(auto_apply_runner.was_called)
             self.assertTrue(auto_apply_runner.confirm)
-            self.assertIn("Auto apply finished", message.answers[0])
+            self.assertIn("Auto apply started", message.answers[0])
+            self.assertIn("Auto apply finished", message.answers[1])
 
 
 class TelegramConfigTests(unittest.TestCase):
