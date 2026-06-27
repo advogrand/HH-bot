@@ -101,7 +101,8 @@ class BotServiceTests(unittest.TestCase):
             message = service.handle_command("/approve 1")
 
             self.assertIn("Dry-run recorded", message)
-            self.assertTrue(store.has_response("resume-1", "1"))
+            self.assertFalse(store.has_response("resume-1", "1"))
+            self.assertEqual(store.list_audit_entries()[0]["api_status"], "dry_run")
 
     def test_stop_sets_stopped_state(self):
         with tempfile.TemporaryDirectory() as temp_dir:

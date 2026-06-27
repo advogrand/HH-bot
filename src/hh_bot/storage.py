@@ -35,11 +35,12 @@ class SQLiteStore:
                 )
                 """
             )
+            conn.execute("DROP INDEX IF EXISTS idx_audit_resume_vacancy")
             conn.execute(
                 """
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_resume_vacancy
+                CREATE UNIQUE INDEX idx_audit_resume_vacancy
                 ON audit_entries (resume_id, vacancy_id)
-                WHERE api_status IN ('sent', 'dry_run')
+                WHERE api_status = 'sent'
                 """
             )
             conn.execute(
@@ -118,7 +119,7 @@ class SQLiteStore:
                 FROM audit_entries
                 WHERE resume_id = ?
                   AND vacancy_id = ?
-                  AND api_status IN ('sent', 'dry_run')
+                  AND api_status = 'sent'
                 LIMIT 1
                 """,
                 (resume_id, vacancy_id),
@@ -162,7 +163,7 @@ class SQLiteStore:
                 SELECT COUNT(*) AS count
                 FROM audit_entries
                 WHERE created_at LIKE ?
-                  AND api_status IN ('sent', 'dry_run')
+                  AND api_status = 'sent'
                 """,
                 (f"{date_prefix}%",),
             ).fetchone()

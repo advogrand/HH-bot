@@ -51,7 +51,7 @@ class HhApplyRunnerTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(result.status, "dry_run")
             self.assertEqual(factory.calls, [])
-            self.assertTrue(store.has_response("resume-1", "vacancy-1"))
+            self.assertFalse(store.has_response("resume-1", "vacancy-1"))
             self.assertEqual(store.list_audit_entries()[0]["api_status"], "dry_run")
 
     async def test_enabled_real_apply_uses_saved_token_and_records_sent(self):
@@ -81,6 +81,7 @@ class HhApplyRunnerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(factory.calls, [("access-1", "HHBot/0.1")])
             self.assertEqual(factory.requests[0].resume_id, "resume-1")
             self.assertEqual(factory.requests[0].vacancy_id, "vacancy-1")
+            self.assertTrue(store.has_response("resume-1", "vacancy-1"))
             self.assertEqual(store.list_audit_entries()[0]["api_status"], "sent")
 
     async def test_enabled_real_apply_without_token_does_not_record_response(self):
