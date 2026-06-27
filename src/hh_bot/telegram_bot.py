@@ -162,6 +162,8 @@ def create_dispatcher(
             "set_score",
             "set_resume",
             "set_letter",
+            "set_include",
+            "set_exclude",
             "search",
             "browser_search",
             "approve",

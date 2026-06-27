@@ -44,6 +44,8 @@ class AppTests(unittest.TestCase):
             store.save_search_text("python backend")
             store.save_min_score(0)
             store.save_cover_letter("Persisted letter")
+            store.save_include_keywords(("designer", "figma"))
+            store.save_exclude_keywords(("php", "frontend"))
 
             service = build_service(settings)
 
@@ -51,7 +53,8 @@ class AppTests(unittest.TestCase):
             self.assertEqual(service.settings.min_score, 0)
             self.assertEqual(service.settings.cover_letter, "Persisted letter")
             self.assertEqual(service.search_text, "python backend")
-            self.assertEqual(service.settings.include_keywords, ("python", "fastapi"))
+            self.assertEqual(service.settings.include_keywords, ("designer", "figma"))
+            self.assertEqual(service.settings.exclude_keywords, ("php", "frontend"))
             self.assertIn("http://localhost:8000/oauth/hh/start", service.handle_command("/connect"))
             self.assertEqual(service.store.list_audit_entries(), [])
 

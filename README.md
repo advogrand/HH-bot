@@ -70,6 +70,8 @@ Supported commands:
 - `/set_score <0-100>`
 - `/set_resume <resume_id>`
 - `/set_letter <cover letter text>`
+- `/set_include <comma-separated keywords>`
+- `/set_exclude <comma-separated keywords>`
 - `/search`
 - `/browser_search [search phrase]`
 - `/approve <vacancy_id>`
@@ -202,6 +204,8 @@ Runtime settings are saved in local SQLite and reused on next start:
 /set_score 72
 /set_resume resume-id
 /set_letter Hello! I am interested in this vacancy and would be glad to discuss my experience.
+/set_include designer, figma, photoshop
+/set_exclude python, backend, developer
 ```
 
 `/set_letter` stores exactly the text you provide. The bot must not invent facts for the cover letter.

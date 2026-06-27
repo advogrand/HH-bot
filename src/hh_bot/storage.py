@@ -258,6 +258,24 @@ class SQLiteStore:
     def get_cover_letter(self) -> str | None:
         return self._get_setting("cover_letter")
 
+    def save_include_keywords(self, keywords: tuple[str, ...]) -> None:
+        self._set_setting("include_keywords", _join_keywords(keywords))
+
+    def get_include_keywords(self) -> tuple[str, ...] | None:
+        value = self._get_setting("include_keywords")
+        if value is None:
+            return None
+        return _split_keywords(value)
+
+    def save_exclude_keywords(self, keywords: tuple[str, ...]) -> None:
+        self._set_setting("exclude_keywords", _join_keywords(keywords))
+
+    def get_exclude_keywords(self) -> tuple[str, ...] | None:
+        value = self._get_setting("exclude_keywords")
+        if value is None:
+            return None
+        return _split_keywords(value)
+
     def _set_setting(self, key: str, value: str) -> None:
         conn = self._connect()
         try:
@@ -291,3 +309,11 @@ class SQLiteStore:
         conn = sqlite3.connect(self.path)
         conn.row_factory = sqlite3.Row
         return conn
+
+
+def _join_keywords(keywords: tuple[str, ...]) -> str:
+    return ",".join(keyword.strip() for keyword in keywords if keyword.strip())
+
+
+def _split_keywords(value: str) -> tuple[str, ...]:
+    return tuple(part.strip() for part in value.split(",") if part.strip())

@@ -92,6 +92,21 @@ class StorageTests(unittest.TestCase):
                 "Здравствуйте, готов обсудить вакансию.",
             )
 
+    def test_saves_and_loads_keyword_settings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "bot.sqlite3"
+            store = SQLiteStore(db_path)
+            store.initialize()
+
+            self.assertIsNone(store.get_include_keywords())
+            self.assertIsNone(store.get_exclude_keywords())
+
+            store.save_include_keywords(("дизайнер", "графическ", "figma"))
+            store.save_exclude_keywords(("python", "backend"))
+
+            self.assertEqual(store.get_include_keywords(), ("дизайнер", "графическ", "figma"))
+            self.assertEqual(store.get_exclude_keywords(), ("python", "backend"))
+
 
 if __name__ == "__main__":
     unittest.main()

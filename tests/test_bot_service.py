@@ -250,6 +250,30 @@ class BotServiceTests(unittest.TestCase):
             self.assertEqual(service.settings.cover_letter, "Здравствуйте, готов обсудить.")
             self.assertEqual(store.get_cover_letter(), "Здравствуйте, готов обсудить.")
 
+    def test_set_include_updates_runtime_and_persists_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(store=store, settings=UserSettings("resume-1", "Hello"))
+
+            message = service.handle_command("/set_include дизайнер, графическ, figma")
+
+            self.assertIn("Include keywords updated", message)
+            self.assertEqual(service.settings.include_keywords, ("дизайнер", "графическ", "figma"))
+            self.assertEqual(store.get_include_keywords(), ("дизайнер", "графическ", "figma"))
+
+    def test_set_exclude_updates_runtime_and_persists_value(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            service = BotService(store=store, settings=UserSettings("resume-1", "Hello"))
+
+            message = service.handle_command("/set_exclude python, backend")
+
+            self.assertIn("Exclude keywords updated", message)
+            self.assertEqual(service.settings.exclude_keywords, ("python", "backend"))
+            self.assertEqual(store.get_exclude_keywords(), ("python", "backend"))
+
 
 if __name__ == "__main__":
     unittest.main()

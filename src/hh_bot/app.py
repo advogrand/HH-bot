@@ -22,11 +22,13 @@ def build_service(settings: Settings) -> BotService:
     min_score = stored_min_score if stored_min_score is not None else settings.default_min_score
     cover_letter = store.get_cover_letter() or settings.default_cover_letter
     search_text = store.get_search_text() or settings.hh_search_text
+    include_keywords = store.get_include_keywords() or settings.include_keywords
+    exclude_keywords = store.get_exclude_keywords() or settings.exclude_keywords
     user_settings = UserSettings(
         resume_id=resume_id,
         cover_letter=cover_letter,
-        include_keywords=settings.include_keywords,
-        exclude_keywords=settings.exclude_keywords,
+        include_keywords=include_keywords,
+        exclude_keywords=exclude_keywords,
         min_score=min_score,
     )
     return BotService(

@@ -61,10 +61,14 @@ class BotService:
             return self._set_resume(arg.strip())
         if name == "/set_letter":
             return self._set_letter(arg.strip())
+        if name == "/set_include":
+            return self._set_include(arg.strip())
+        if name == "/set_exclude":
+            return self._set_exclude(arg.strip())
         return (
             "Unknown command. Use /start, /connect, /resumes, /use_resume, /status, "
-            "/settings, /set_search, /set_score, /set_resume, /set_letter, /search, "
-            "/approve, /reject, or /stop."
+            "/settings, /set_search, /set_score, /set_resume, /set_letter, "
+            "/set_include, /set_exclude, /search, /approve, /reject, or /stop."
         )
 
     def _start(self) -> str:
@@ -141,6 +145,22 @@ class BotService:
         self.settings = replace(self.settings, cover_letter=cover_letter)
         self.store.save_cover_letter(cover_letter)
         return "Cover letter updated."
+
+    def _set_include(self, raw_keywords: str) -> str:
+        keywords = _parse_keywords(raw_keywords)
+        if not keywords:
+            return "Use /set_include followed by comma-separated keywords."
+        self.settings = replace(self.settings, include_keywords=keywords)
+        self.store.save_include_keywords(keywords)
+        return f"Include keywords updated: {', '.join(keywords)}"
+
+    def _set_exclude(self, raw_keywords: str) -> str:
+        keywords = _parse_keywords(raw_keywords)
+        if not keywords:
+            return "Use /set_exclude followed by comma-separated keywords."
+        self.settings = replace(self.settings, exclude_keywords=keywords)
+        self.store.save_exclude_keywords(keywords)
+        return f"Exclude keywords updated: {', '.join(keywords)}"
 
     def _status(self) -> str:
         audit_count = len(self.store.list_audit_entries())
@@ -245,3 +265,7 @@ class BotService:
             if vacancy.id == vacancy_id:
                 return vacancy
         return None
+
+
+def _parse_keywords(raw_keywords: str) -> tuple[str, ...]:
+    return tuple(part.strip().lower() for part in raw_keywords.split(",") if part.strip())
