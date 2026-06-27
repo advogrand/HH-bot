@@ -123,7 +123,7 @@ class HhVacancyTests(unittest.IsolatedAsyncioTestCase):
             http_client=ForbiddenHttpClient(),
         )
 
-        with self.assertRaisesRegex(HhVacancySearchError, "hh.ru API denied vacancy search"):
+        with self.assertRaisesRegex(HhVacancySearchError, "hh.ru API denied this operation"):
             await client.search_vacancies(SearchQuery(text="python"))
 
 

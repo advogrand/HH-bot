@@ -4,6 +4,7 @@ from pathlib import Path
 
 from hh_bot.auto_apply import AutoApplyRunner, is_remote_vacancy
 from hh_bot.hh_apply import ApplyResult
+from hh_bot.hh_errors import HhApiError
 from hh_bot.models import ScoreResult, UserSettings, Vacancy
 from hh_bot.storage import SQLiteStore
 
@@ -174,14 +175,67 @@ class AutoApplyTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(summary.sent, 2)
             self.assertEqual(sleep.calls, [30])
 
+    async def test_auto_apply_stops_on_fatal_apply_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            apply_runner = FakeApplyRunner(
+                result=ApplyResult(
+                    ok=False,
+                    status="failed",
+                    error=HhApiError(
+                        status_code=403,
+                        type="forbidden",
+                        value="forbidden",
+                        user_message="hh.ru API denied this operation.",
+                    ),
+                    user_message="hh.ru API denied this operation.",
+                )
+            )
+            runner = AutoApplyRunner(
+                store=store,
+                apply_runner=apply_runner,
+                daily_limit=25,
+                delay_seconds=30,
+                sleep=FakeSleep(),
+            )
+            settings = UserSettings(
+                resume_id="resume-1",
+                cover_letter="Hello",
+                include_keywords=("РґРёР·Р°Р№РЅРµСЂ",),
+                min_score=55,
+            )
+
+            summary = await runner.run(
+                vacancies=[
+                    _vacancy("1", "Digital РґРёР·Р°Р№РЅРµСЂ remote", "remote"),
+                    _vacancy("2", "Digital РґРёР·Р°Р№РЅРµСЂ remote 2", "remote"),
+                ],
+                settings=settings,
+                confirm=True,
+            )
+
+            self.assertEqual(summary.sent, 0)
+            self.assertEqual(summary.failed, 1)
+            self.assertIn("Stopped:", summary.user_message)
+            self.assertEqual(apply_runner.applied_ids, ["1"])
+
 
 class FakeApplyRunner:
-    def __init__(self, *, real_apply_enabled: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        real_apply_enabled: bool = True,
+        result: ApplyResult | None = None,
+    ) -> None:
         self.applied_ids = []
         self.real_apply_enabled = real_apply_enabled
+        self.result = result
 
     async def approve(self, *, vacancy, settings, score):
         self.applied_ids.append(vacancy.id)
+        if self.result is not None:
+            return self.result
         return ApplyResult(ok=True, status="sent", user_message="sent")
 
 

@@ -26,6 +26,11 @@ class FakeHttpClient:
         return self.response
 
 
+class ErrorHttpClient:
+    async def post(self, url: str, *, headers: dict, data: dict) -> FakeResponse:
+        raise TimeoutError("connect timed out")
+
+
 class HhApplyTests(unittest.IsolatedAsyncioTestCase):
     async def test_apply_to_vacancy_posts_resume_vacancy_and_message(self):
         fake_http = FakeHttpClient(FakeResponse(201))
@@ -77,6 +82,26 @@ class HhApplyTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result.ok)
         self.assertEqual(result.status, "failed")
         self.assertEqual(result.error.value, "already_applied")
+
+    async def test_apply_to_vacancy_maps_network_error(self):
+        client = HhApplyClient(
+            access_token="access-1",
+            user_agent="HHBot/0.1",
+            http_client=ErrorHttpClient(),
+        )
+
+        result = await client.apply_to_vacancy(
+            ApplyRequest(
+                resume_id="resume-1",
+                vacancy_id="vacancy-1",
+                message="Hello",
+            )
+        )
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.status, "failed")
+        self.assertEqual(result.error.type, "network_error")
+        self.assertIn("TimeoutError", result.user_message)
 
 
 if __name__ == "__main__":

@@ -45,18 +45,21 @@ class HhApplyClient:
             return await self._apply_with_client(client, request)
 
     async def _apply_with_client(self, client: Any, request: ApplyRequest) -> ApplyResult:
-        response = await client.post(
-            self.apply_url,
-            headers={
-                "Authorization": f"Bearer {self.access_token}",
-                "User-Agent": self.user_agent,
-            },
-            data={
-                "resume_id": request.resume_id,
-                "vacancy_id": request.vacancy_id,
-                "message": request.message,
-            },
-        )
+        try:
+            response = await client.post(
+                self.apply_url,
+                headers={
+                    "Authorization": f"Bearer {self.access_token}",
+                    "User-Agent": self.user_agent,
+                },
+                data={
+                    "resume_id": request.resume_id,
+                    "vacancy_id": request.vacancy_id,
+                    "message": request.message,
+                },
+            )
+        except Exception as exc:
+            return _network_error_result(exc)
         if response.status_code == 201:
             return ApplyResult(ok=True, status="sent", user_message="Real hh.ru response sent.")
 
@@ -71,3 +74,18 @@ class HhApplyClient:
             error=error,
             user_message=error.user_message,
         )
+
+
+def _network_error_result(exc: Exception) -> ApplyResult:
+    error = HhApiError(
+        status_code=0,
+        type="network_error",
+        value=exc.__class__.__name__,
+        user_message=f"Network error while calling hh.ru API: {exc.__class__.__name__}.",
+    )
+    return ApplyResult(
+        ok=False,
+        status="failed",
+        error=error,
+        user_message=error.user_message,
+    )

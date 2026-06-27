@@ -27,6 +27,7 @@ class AutoApplySummary:
     skipped_score: int = 0
     skipped_duplicate: int = 0
     skipped_limit: int = 0
+    stopped_reason: str = ""
     user_message: str = ""
 
 
@@ -76,6 +77,7 @@ class AutoApplyRunner:
 
         remaining = max(0, self.daily_limit - self.store.count_responses_on_date(_today()))
         sent = failed = skipped_non_remote = skipped_score = skipped_duplicate = skipped_limit = 0
+        stopped_reason = ""
 
         for vacancy in vacancies:
             if self.remote_only and not is_remote_vacancy(vacancy):
@@ -104,6 +106,21 @@ class AutoApplyRunner:
                 sent += 1
             else:
                 failed += 1
+                if _is_fatal_apply_error(result):
+                    stopped_reason = result.user_message or "Fatal hh.ru API error."
+                    break
+
+        lines = [
+            "Auto apply finished.",
+            f"Sent: {sent}",
+            f"Failed: {failed}",
+            f"Skipped non-remote: {skipped_non_remote}",
+            f"Skipped score: {skipped_score}",
+            f"Skipped duplicate: {skipped_duplicate}",
+            f"Skipped daily limit: {skipped_limit}",
+        ]
+        if stopped_reason:
+            lines.append(f"Stopped: {stopped_reason}")
 
         return AutoApplySummary(
             sent=sent,
@@ -112,15 +129,8 @@ class AutoApplyRunner:
             skipped_score=skipped_score,
             skipped_duplicate=skipped_duplicate,
             skipped_limit=skipped_limit,
-            user_message=(
-                "Auto apply finished.\n"
-                f"Sent: {sent}\n"
-                f"Failed: {failed}\n"
-                f"Skipped non-remote: {skipped_non_remote}\n"
-                f"Skipped score: {skipped_score}\n"
-                f"Skipped duplicate: {skipped_duplicate}\n"
-                f"Skipped daily limit: {skipped_limit}"
-            ),
+            stopped_reason=stopped_reason,
+            user_message="\n".join(lines),
         )
 
     def _real_apply_enabled(self) -> bool:
@@ -143,3 +153,26 @@ def is_remote_vacancy(vacancy: Vacancy) -> bool:
 
 def _today() -> str:
     return datetime.now(UTC).date().isoformat()
+
+
+def _is_fatal_apply_error(result) -> bool:
+    error = getattr(result, "error", None)
+    if error is None:
+        return False
+    return error.value in {
+        "bad_authorization",
+        "captcha_required",
+        "forbidden",
+        "limit_exceeded",
+        "network_error",
+        "token_expired",
+        "token_revoked",
+    } or error.type in {
+        "bad_authorization",
+        "captcha_required",
+        "forbidden",
+        "limit_exceeded",
+        "network_error",
+        "token_expired",
+        "token_revoked",
+    }
