@@ -88,6 +88,28 @@ class AutoApplyTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Use /auto_apply confirm", summary.user_message)
             self.assertEqual(apply_runner.applied_ids, [])
 
+    async def test_auto_apply_explains_empty_queue(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")
+            store.initialize()
+            apply_runner = FakeApplyRunner()
+            runner = AutoApplyRunner(
+                store=store,
+                apply_runner=apply_runner,
+                daily_limit=25,
+                delay_seconds=30,
+                sleep=FakeSleep(),
+            )
+
+            summary = await runner.run(
+                vacancies=[],
+                settings=UserSettings("resume-1", "Hello"),
+                confirm=True,
+            )
+
+            self.assertIn("No queued vacancies", summary.user_message)
+            self.assertEqual(apply_runner.applied_ids, [])
+
     async def test_dry_run_auto_apply_does_not_sleep_between_items(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = SQLiteStore(Path(temp_dir) / "bot.sqlite3")

@@ -55,6 +55,14 @@ class AutoApplyRunner:
         settings: UserSettings,
         confirm: bool,
     ) -> AutoApplySummary:
+        if not vacancies:
+            return AutoApplySummary(
+                user_message=(
+                    "No queued vacancies. Run /browser_search first, review candidates, "
+                    "then use /auto_apply confirm."
+                )
+            )
+
         if not confirm:
             mode = "real" if self._real_apply_enabled() else "dry-run"
             return AutoApplySummary(
