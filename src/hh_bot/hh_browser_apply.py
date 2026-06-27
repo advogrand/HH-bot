@@ -84,6 +84,11 @@ def apply_visible_page(page, *, vacancy: Vacancy, settings: UserSettings) -> App
     if stop is not None:
         return stop
 
+    cover_letter_button = _first_visible(page, COVER_LETTER_BUTTON_SELECTORS)
+    if cover_letter_button is not None:
+        cover_letter_button.click()
+        _wait(page, 500)
+
     message_field = _first_visible(page, MESSAGE_FIELD_SELECTORS)
     if message_field is not None and settings.cover_letter:
         message_field.fill(settings.cover_letter)
@@ -120,6 +125,13 @@ MESSAGE_FIELD_SELECTORS = (
     '[data-qa="vacancy-response-popup-form-letter-input"]',
     'textarea[name="message"]',
     "textarea",
+)
+
+COVER_LETTER_BUTTON_SELECTORS = (
+    '[data-qa="vacancy-response-letter-toggle"]',
+    'button:has-text("\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0441\u043e\u043f\u0440\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0435")',
+    'a:has-text("\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0441\u043e\u043f\u0440\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0435")',
+    'text="\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0441\u043e\u043f\u0440\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0435"',
 )
 
 SUBMIT_BUTTON_SELECTORS = (

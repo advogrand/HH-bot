@@ -10,7 +10,11 @@ class BrowserApplyTests(unittest.TestCase):
             text="\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u044f \u0434\u0438\u0437\u0430\u0439\u043d\u0435\u0440",
             selectors={
                 '[data-qa="vacancy-response-link-top"]': FakeLocator(visible=True),
-                '[data-qa="vacancy-response-popup-form-letter-input"]': FakeLocator(visible=True),
+                '[data-qa="vacancy-response-letter-toggle"]': FakeLocator(
+                    visible=True,
+                    reveal_selector='[data-qa="vacancy-response-popup-form-letter-input"]',
+                ),
+                '[data-qa="vacancy-response-popup-form-letter-input"]': FakeLocator(visible=False),
                 '[data-qa="vacancy-response-submit-popup"]': FakeLocator(
                     visible=True,
                     after_click_text="\u041e\u0442\u043a\u043b\u0438\u043a \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d",
@@ -97,9 +101,16 @@ class FakeBodyLocator:
 
 
 class FakeLocator:
-    def __init__(self, *, visible: bool, after_click_text: str = "") -> None:
+    def __init__(
+        self,
+        *,
+        visible: bool,
+        after_click_text: str = "",
+        reveal_selector: str = "",
+    ) -> None:
         self.visible = visible
         self.after_click_text = after_click_text
+        self.reveal_selector = reveal_selector
         self.filled = ""
         self.page: FakePage | None = None
 
@@ -116,6 +127,8 @@ class FakeLocator:
     def click(self) -> None:
         if self.after_click_text and self.page is not None:
             self.page.text = self.after_click_text
+        if self.reveal_selector and self.page is not None:
+            self.page.selectors[self.reveal_selector].visible = True
 
     def fill(self, value: str) -> None:
         self.filled = value
