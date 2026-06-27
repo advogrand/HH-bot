@@ -36,13 +36,22 @@ def run_browser_login(*, config: HhBrowserLoginConfig) -> str:
         )
         try:
             page = context.pages[0] if context.pages else context.new_page()
-            page.goto("https://hh.ru/", wait_until="domcontentloaded", timeout=60_000)
+            try:
+                page.goto("https://hh.ru/", wait_until="domcontentloaded", timeout=60_000)
+            except Exception as exc:
+                return f"Could not open hh.ru login page: {exc.__class__.__name__}."
             deadline_ms = config.wait_seconds * 1_000
             elapsed_ms = 0
             while elapsed_ms < deadline_ms:
                 if _looks_logged_in(page):
                     return "hh.ru browser profile is logged in. You can run /browser_search now."
-                page.wait_for_timeout(2_000)
+                try:
+                    page.wait_for_timeout(2_000)
+                except Exception:
+                    return (
+                        "Browser login window was closed. If you finished login, run /browser_search. "
+                        "If not, run /browser_login again."
+                    )
                 elapsed_ms += 2_000
             return (
                 "Login window timeout. If you finished login, try /browser_search. "
